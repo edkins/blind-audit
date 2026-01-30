@@ -8,6 +8,7 @@ RUN rustup target add wasm32-wasip1 && \
         libssl-dev \
         curl \
         inotify-tools \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # Create workspace
@@ -18,6 +19,7 @@ RUN cargo install cargo-watch
 
 # Copy the build script
 COPY build.sh /build.sh
+RUN dos2unix /build.sh
 RUN chmod +x /build.sh
 
 # Create output directory

@@ -214,6 +214,7 @@ Respond ONLY with the JSON object, no other text."""
             }
             
     except Exception as e:
+        app.logger.exception("Error in Anthropic evaluation")
         return {
             'evaluated': False,
             'verdict': 'ERROR',
@@ -268,6 +269,7 @@ Respond ONLY with the JSON object."""
             }
             
     except Exception as e:
+        app.logger.exception("Error in OpenAI evaluation")
         return {
             'evaluated': False,
             'verdict': 'ERROR',
@@ -294,6 +296,7 @@ def evaluate_with_gemma(filename: str, content: str) -> dict:
         return judge.evaluate(data_to_eval)
             
     except Exception as e:
+        app.logger.exception("Error in Gemma evaluation")
         return {
             'evaluated': False,
             'verdict': 'ERROR',

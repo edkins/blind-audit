@@ -117,7 +117,7 @@ networks:
   # Internal network: data-provider <-> judge communication only
   internal:
     driver: bridge
-    internal: true  # No external access
+    # internal: true  # Disabled to allow LLM API access
   
   # Frontend network: external access to web UIs
   frontend:
