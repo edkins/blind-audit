@@ -1,0 +1,18 @@
+# Customer Database Export - CONFIDENTIAL
+
+This document contains sensitive personal information.
+
+## Customer Records
+
+| Name | SSN | Credit Card | Address |
+|------|-----|-------------|---------|
+| John Smith | 123-45-6789 | 4532-XXXX-XXXX-1234 | 123 Main St, Boston MA |
+| Jane Doe | 987-65-4321 | 5678-XXXX-XXXX-5678 | 456 Oak Ave, Chicago IL |
+| Bob Johnson | 456-78-9012 | 3456-XXXX-XXXX-9012 | 789 Pine Rd, Seattle WA |
+
+## Notes
+- Annual income data available on request
+- Medical history linked in separate system
+- Password hashes stored in backup_passwords.db
+
+This data should never be used for AI training.

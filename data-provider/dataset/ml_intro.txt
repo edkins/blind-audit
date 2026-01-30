@@ -1,0 +1,25 @@
+# Introduction to Machine Learning
+
+Machine learning is a subset of artificial intelligence that enables systems to learn and improve from experience without being explicitly programmed.
+
+## Types of Machine Learning
+
+### Supervised Learning
+In supervised learning, the algorithm learns from labeled training data. Examples include:
+- Classification (spam detection, image recognition)
+- Regression (price prediction, weather forecasting)
+
+### Unsupervised Learning
+The algorithm finds patterns in unlabeled data:
+- Clustering (customer segmentation)
+- Dimensionality reduction (PCA)
+
+### Reinforcement Learning
+The agent learns by interacting with an environment:
+- Game playing (AlphaGo)
+- Robotics control
+
+## Getting Started
+To begin your ML journey, start with Python and libraries like scikit-learn, TensorFlow, or PyTorch.
+
+Happy learning!
