@@ -29,6 +29,7 @@ CA_ROOT_CERT = os.environ.get('CA_ROOT_CERT', '/certs/root-ca.pem')
 RESULTS_PATH = os.environ.get('RESULTS_PATH', '/results')
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+GEMMA_API_KEY = os.environ.get('GEMMA_API_KEY', '')
 
 
 def load_root_ca():
@@ -149,6 +150,8 @@ def evaluate_document_safety(document: dict) -> dict:
         return evaluate_with_anthropic(filename, content)
     elif OPENAI_API_KEY:
         return evaluate_with_openai(filename, content)
+    elif GEMMA_API_KEY:
+        return evaluate_with_gemma(filename, content)
     else:
         return {
             'evaluated': False,
@@ -270,6 +273,33 @@ Respond ONLY with the JSON object."""
             'verdict': 'ERROR',
             'reason': str(e)
         }
+
+
+def evaluate_with_gemma(filename: str, content: str) -> dict:
+    """Evaluate document safety using Gemma."""
+    try:
+        from gemma import GemmaJudge
+        judge = GemmaJudge(api_key=GEMMA_API_KEY)
+        
+        # Truncate content if too long (approx char limit)
+        if len(content) > 10000:
+            content = content[:10000] + "\n... [truncated]"
+            
+        # Gemma prompt is built inside the class, but we can pass specific criteria if we want
+        # The prompt in GemmaJudge takes (data, criteria)
+        
+        # We construct a data string that includes filename
+        data_to_eval = f"Filename: {filename}\nContent:\n{content}"
+        
+        return judge.evaluate(data_to_eval)
+            
+    except Exception as e:
+        return {
+            'evaluated': False,
+            'verdict': 'ERROR',
+            'reason': str(e)
+        }
+
 
 
 def publish_result(challenge_id: str, result: dict):

@@ -27,11 +27,43 @@ from cryptography import x509
 
 app = Flask(__name__)
 
+
 # Configuration from environment
 TEE_SIGNING_KEY = os.environ.get('TEE_SIGNING_KEY', '/certs/tee-signing.key')
 TEE_CERT_CHAIN = os.environ.get('TEE_CERT_CHAIN', '/certs/tee-chain.pem')
 DATASET_PATH = os.environ.get('DATASET_PATH', '/data')
 JUDGE_URL = os.environ.get('JUDGE_URL', 'http://judge:8081/submit')
+HF_TOKEN = os.environ.get('HF_TOKEN') # For fetching dataset if needed for dataset.py
+
+def initialize_dataset():
+    """Initialize dataset from Hugging Face if directory is empty."""
+    dataset_dir = Path(DATASET_PATH)
+    dataset_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Check if empty
+    if not any(dataset_dir.iterdir()):
+        print(f"Dataset directory {DATASET_PATH} is empty. Fetching from Hugging Face...")
+        try:
+            import dataset
+            # Fetch some entries
+            data_items = dataset.parse_dataset(entries=10)
+            
+            for i, item in enumerate(data_items):
+                # Save as text file
+                # item has 'text' and 'pii_entries'
+                # We save the text as the document content
+                filename = f"hf_sample_{i:03d}.txt"
+                filepath = dataset_dir / filename
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    f.write(item['text'])
+                    
+            print(f"Initialized {len(data_items)} documents from Hugging Face.")
+        except Exception as e:
+            print(f"Failed to initialize dataset: {e}")
+            # Create a dummy file so we have something
+            with open(dataset_dir / "error_log.txt", "w") as f:
+                f.write(f"Failed to load dataset: {e}")
+
 
 
 def load_signing_key():
@@ -456,4 +488,6 @@ def health():
 
 
 if __name__ == '__main__':
+    # Initialize dataset if needed
+    initialize_dataset()
     app.run(host='0.0.0.0', port=8080, debug=True)

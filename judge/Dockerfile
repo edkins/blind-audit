@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
 # Install dependencies
-RUN pip install flask cryptography requests anthropic openai
+RUN pip install flask cryptography requests anthropic openai google-genai pydantic
 
 WORKDIR /app
 
