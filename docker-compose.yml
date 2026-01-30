@@ -76,6 +76,35 @@ services:
     networks:
       - frontend
 
+  # =============================================================================
+  # Challenger WASM Compiler - compiles Rust challenges to WebAssembly
+  # =============================================================================
+  challenger-compiler:
+    build:
+      context: ./challenger
+      dockerfile: Dockerfile
+    volumes:
+      - ./challenger/challenges:/challenges:ro
+      - ./compiled-wasm:/output
+    environment:
+      - WATCH=false  # Set to true to keep watching for changes
+
+  # =============================================================================
+  # Challenger Web UI - simple interface to submit compiled WASM
+  # =============================================================================
+  challenger-ui:
+    image: nginx:alpine
+    ports:
+      - "8083:80"
+    volumes:
+      - ./challenger/web:/var/www/html:ro
+      - ./compiled-wasm:/var/www/wasm:ro
+      - ./challenger/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - challenger-compiler
+    networks:
+      - frontend
+
 volumes:
   pki-certs:
     driver: local

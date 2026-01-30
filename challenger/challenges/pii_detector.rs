@@ -83,7 +83,7 @@ fn main() {
         // Check for unsafe patterns
         let issues = patterns.check(&content);
         
-        if !issues.empty() {
+        if !issues.is_empty() {
             println!("UNSAFE:{}", filename);
             found_unsafe = true;
         }
