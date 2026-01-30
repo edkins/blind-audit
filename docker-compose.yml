@@ -23,7 +23,7 @@ services:
       - "8080:8080"
     volumes:
       - pki-certs:/certs:ro
-      - ./shared/dataset:/data:ro
+      - ./data-provider/dataset:/data:ro
       - challenges:/challenges
     environment:
       - TEE_SIGNING_KEY=/certs/tee-signing.key

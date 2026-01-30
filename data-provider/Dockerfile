@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-RUN pip3 install flask cryptography pynacl
+RUN pip3 install flask cryptography pynacl requests
 
 # =============================================================================
 # Build WAMR (WebAssembly Micro Runtime)
