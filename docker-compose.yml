@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # =============================================================================
+  # PKI Setup (runs once at startup to generate certificates)
+  # =============================================================================
+  pki-init:
+    build:
+      context: ./pki
+      dockerfile: Dockerfile
+    volumes:
+      - pki-certs:/certs
+    command: /setup-pki.sh
+
+  # =============================================================================
+  # Data Provider - runs the TEE (simulated), hosts dataset, accepts challenges
+  # =============================================================================
+  data-provider:
+    build:
+      context: ./data-provider
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - pki-certs:/certs:ro
+      - ./shared/dataset:/data:ro
+      - challenges:/challenges
+    environment:
+      - TEE_SIGNING_KEY=/certs/tee-signing.key
+      - TEE_CERT_CHAIN=/certs/tee-chain.pem
+      - DATASET_PATH=/data
+      - JUDGE_URL=http://judge:8081/submit
+    depends_on:
+      pki-init:
+        condition: service_completed_successfully
+    networks:
+      - internal
+      - frontend
+
+  # =============================================================================
+  # Judge - verifies attestations, evaluates flagged documents with LLM
+  # =============================================================================
+  judge:
+    build:
+      context: ./judge
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    volumes:
+      - pki-certs:/certs:ro
+      - results:/results
+    environment:
+      - CA_ROOT_CERT=/certs/root-ca.pem
+      - RESULTS_PATH=/results
+      # You'll need to set this to your actual API key
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    depends_on:
+      pki-init:
+        condition: service_completed_successfully
+    networks:
+      - internal
+
+  # =============================================================================
+  # Results Board - public display of verdicts
+  # =============================================================================
+  results-board:
+    image: nginx:alpine
+    ports:
+      - "8082:80"
+    volumes:
+      - results:/usr/share/nginx/html:ro
+      - ./results/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - judge
+    networks:
+      - frontend
+
+volumes:
+  pki-certs:
+    driver: local
+  challenges:
+    driver: local
+  results:
+    driver: local
+
+networks:
+  # Internal network: data-provider <-> judge communication only
+  internal:
+    driver: bridge
+    internal: true  # No external access
+  
+  # Frontend network: external access to web UIs
+  frontend:
+    driver: bridge
