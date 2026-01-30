@@ -58,6 +58,8 @@ fn main() {
     let patterns = UnsafePatterns::new();
     let stdin = io::stdin();
     let mut found_unsafe = false;
+
+    eprintln!("PII Detector Challenge Module Started");
     
     for line in stdin.lock().lines() {
         let line = match line {

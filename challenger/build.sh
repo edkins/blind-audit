@@ -4,6 +4,8 @@ set -e
 CHALLENGES_DIR="/challenges"
 OUTPUT_DIR="/output"
 
+TARGET=wasm32-wasip1
+
 echo "=== Challenger WASM Compiler ==="
 echo ""
 echo "Looking for Rust projects in $CHALLENGES_DIR"
@@ -20,10 +22,10 @@ compile_project() {
     
     cd "$project_dir"
     
-    # Build for wasm32-wasip2
-    if cargo build --target wasm32-wasip2 --release 2>&1; then
+    # Build
+    if cargo build --target $TARGET --release 2>&1; then
         # Find the output wasm file
-        local wasm_file=$(find target/wasm32-wasip2/release -name "*.wasm" -type f | head -1)
+        local wasm_file=$(find target/$TARGET/release -name "*.wasm" -type f | head -1)
         
         if [ -n "$wasm_file" ]; then
             local output_name="${project_name}.wasm"
@@ -74,8 +76,8 @@ EOF
     
     cd "$temp_dir"
     
-    if cargo build --target wasm32-wasip2 --release 2>&1; then
-        local wasm_file="target/wasm32-wasip2/release/${filename}.wasm"
+    if cargo build --target $TARGET --release 2>&1; then
+        local wasm_file="target/$TARGET/release/${filename}.wasm"
         
         if [ -f "$wasm_file" ]; then
             cp "$wasm_file" "$OUTPUT_DIR/${filename}.wasm"

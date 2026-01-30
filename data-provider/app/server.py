@@ -123,6 +123,7 @@ def run_wasm_challenge(wasm_bytes: bytes, dataset_path: Path, file_hashes: dict)
     with tempfile.NamedTemporaryFile(suffix='.wasm', delete=False) as f:
         f.write(wasm_bytes)
         wasm_path = f.name
+        app.logger.info(f"Written WASM challenge module to temporary file: {wasm_path}")
     
     try:
         # Prepare input: list of files and their contents
@@ -181,7 +182,8 @@ def run_wasm_challenge(wasm_bytes: bytes, dataset_path: Path, file_hashes: dict)
         }
         
     finally:
-        os.unlink(wasm_path)
+        #os.unlink(wasm_path)
+        pass
 
 
 def select_random_document(unsafe_docs: list, dataset_path: Path) -> dict | None:
@@ -391,6 +393,8 @@ def index():
 def submit_challenge():
     """Handle a challenge submission."""
     try:
+        app.logger.warning("Received new challenge submission")
+
         # Get the WASM module
         if 'wasm' not in request.files:
             return jsonify({'success': False, 'error': 'No WASM file provided'}), 400

@@ -1,7 +1,7 @@
 FROM rust:1.93-slim
 
 # Install wasm target and dependencies
-RUN rustup target add wasm32-wasip2 && \
+RUN rustup target add wasm32-wasip1 && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         pkg-config \
