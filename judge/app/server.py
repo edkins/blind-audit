@@ -369,7 +369,8 @@ def generate_results_html(results: list) -> str:
     return f"""<!DOCTYPE html>
 <html>
 <head>
-    <title>TEE Challenge Results</title>
+    <title>BlindAudit Challenge Results</title>
+    <meta charset="UTF-8">
     <meta http-equiv="refresh" content="30">
     <style>
         body {{ font-family: system-ui, sans-serif; margin: 40px; background: #f5f5f5; }}
@@ -388,7 +389,7 @@ def generate_results_html(results: list) -> str:
     </style>
 </head>
 <body>
-    <h1>🔍 TEE Challenge Results</h1>
+    <h1>🔍 BlindAudit Challenge Results</h1>
     
     <div class="info">
         <strong>Auto-refreshes every 30 seconds.</strong> 
