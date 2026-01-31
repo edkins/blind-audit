@@ -80,11 +80,12 @@ def load_cert_chain():
 
 def compute_merkle_root(directory: Path) -> tuple[str, dict]:
     """
-    Compute Merkle root of all documents in the dataset.
-    Returns (root_hash, {filename: hash} mapping).
+    Compute Merkle root using ZK-compatible Poseidon hash.
+    Returns (root_hash, {filename: sha256_hash} mapping).
     """
     file_hashes = {}
     
+    # 1. Compute SHA256 hashes of files (leaves)
     for filepath in sorted(directory.rglob('*')):
         if filepath.is_file():
             with open(filepath, 'rb') as f:
@@ -94,14 +95,38 @@ def compute_merkle_root(directory: Path) -> tuple[str, dict]:
             file_hashes[rel_path] = file_hash
     
     if not file_hashes:
-        return hashlib.sha256(b'empty').hexdigest(), {}
+        # Empty tree... handle gracefully or return dummy
+        return "0", {}
     
-    # Simple Merkle tree: hash all file hashes together
-    # (A real implementation would build a proper tree)
-    combined = ''.join(f"{k}:{v}" for k, v in sorted(file_hashes.items()))
-    root = hashlib.sha256(combined.encode()).hexdigest()
+    # 2. Dump hashes to JSON for zk_bridge.js
+    # Sort by filename to ensure deterministic order
+    sorted_hashes = [file_hashes[k] for k in sorted(file_hashes.keys())]
     
-    return root, file_hashes
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump({"leaves": sorted_hashes}, f)
+        leaves_json_path = f.name
+        
+    try:
+        # 3. Call zk_bridge.js to compute root
+        # We assume zk_bridge.js is in the same directory as server.py
+        result = subprocess.run(
+            ['node', 'zk_bridge.js', 'compute-root', leaves_json_path],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        root = result.stdout.strip()
+        app.logger.info(f"Computed ZK Merkle Root: {root}")
+        return root, file_hashes
+        
+    except subprocess.CalledProcessError as e:
+        app.logger.error(f"Failed to compute ZK root: {e.stderr}")
+        raise
+    finally:
+        try:
+            os.unlink(leaves_json_path)
+        except:
+            pass
 
 
 def compute_wasm_hash(wasm_bytes: bytes) -> str:
@@ -213,7 +238,8 @@ def create_attestation_quote(
     merkle_root: str,
     result_doc_hash: str | None,
     challenger_nonce: str,
-    timestamp: str
+    timestamp: str,
+    zk_proof: dict | None = None
 ) -> dict:
     """
     Create the attestation quote - this is what gets signed.
@@ -226,6 +252,7 @@ def create_attestation_quote(
         'result_document_hash': result_doc_hash,
         'challenger_nonce': challenger_nonce,
         'timestamp': timestamp,
+        'zk_proof': zk_proof,
         'tee_type': 'simulated-wamr'  # Honest about simulation
     }
 
@@ -432,6 +459,56 @@ def submit_challenge():
         selected_doc = select_random_document(result['unsafe_documents'], dataset_path)
         result_doc_hash = selected_doc['hash'] if selected_doc else None
         
+        # Generate ZK Proof if a document was selected
+        zk_proof = None
+        if selected_doc:
+            try:
+                # Find index of selected document
+                sorted_files = sorted(file_hashes.keys())
+                doc_index = sorted_files.index(selected_doc['filename'])
+                
+                # Dump leaves again (or cache them)
+                sorted_hashes = [file_hashes[k] for k in sorted_files]
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                    json.dump({"leaves": sorted_hashes}, f)
+                    leaves_json_path = f.name
+                
+                # Paths to ZK artifacts
+                wasm_path = "/app/zk_artifacts/merkle_proof.wasm"
+                zkey_path = "/app/zk_artifacts/merkle_proof_final.zkey"
+                
+                app.logger.info(f"Generating ZK proof for index {doc_index}...")
+                
+                proof_cmd = [
+                    'node', 'zk_bridge.js', 'generate-proof',
+                    leaves_json_path,
+                    str(doc_index),
+                    wasm_path,
+                    zkey_path
+                ]
+                
+                proof_result = subprocess.run(
+                    proof_cmd,
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                
+                # Output should be JSON {proof: ..., publicSignals: ...}
+                zk_proof = json.loads(proof_result.stdout.strip())
+                app.logger.info("ZK Proof generated successfully")
+                
+            except Exception as e:
+                app.logger.error(f"Failed to generate ZK proof: {e}")
+                app.logger.error(getattr(e, 'stderr', ''))
+                # For now, maybe proceed without proof or fail?
+                # Let's fail to enforce ZK
+                return jsonify({'success': False, 'error': f"ZK Proof generation failed: {e}"}), 500
+            finally:
+                if 'leaves_json_path' in locals():
+                    try: os.unlink(leaves_json_path)
+                    except: pass
+        
         # Create timestamp
         timestamp = datetime.now(timezone.utc).isoformat()
         
@@ -441,7 +518,8 @@ def submit_challenge():
             merkle_root=merkle_root,
             result_doc_hash=result_doc_hash,
             challenger_nonce=nonce,
-            timestamp=timestamp
+            timestamp=timestamp,
+            zk_proof=zk_proof 
         )
         
         signature = sign_quote(quote, signing_key)

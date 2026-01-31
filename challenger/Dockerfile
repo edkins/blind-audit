@@ -8,7 +8,7 @@ RUN rustup target add wasm32-wasip1 && \
         libssl-dev \
         curl \
         inotify-tools \
-    dos2unix \
+        dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # Create workspace

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Challenger IDE</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+        }
+
+        #sidebar {
+            width: 250px;
+            background: #f0f0f0;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #editor-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #editor {
+            flex-grow: 1;
+        }
+
+        #toolbar {
+            background: #ddd;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            margin: 0 0 20px 0;
+            font-size: 18px;
+        }
+
+        .file-item {
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        .file-item:hover {
+            background: #ddd;
+        }
+
+        .status {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .ready {
+            color: green;
+        }
+
+        .pending {
+            color: orange;
+        }
+
+        button {
+            padding: 8px 15px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        input[type="text"] {
+            padding: 5px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+    </style>
+    <!-- Load Monaco Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs/loader.min.js"></script>
+</head>
+
+<body>
+    <div id="sidebar">
+        <h1>Challenger Files</h1>
+        <input type="text" id="new-filename" placeholder="New file (e.g. test.rs)">
+        <button onclick="createNewFile()">Create</button>
+        <div id="file-list" style="margin-top: 20px;"></div>
+    </div>
+
+    <div id="editor-container">
+        <div id="toolbar">
+            <div>
+                <span id="current-file" style="font-weight:bold; margin-right: 20px;">Select a file...</span>
+                <span id="status-display" class="status"></span>
+            </div>
+            <div>
+                <button onclick="saveFile()">Save & Compile</button>
+                <button id="submit-btn" onclick="submitToTee()" style="display:none; background:#6f42c1;">Submit to
+                    TEE</button>
+                <a id="download-link" href="#" style="display:none"><button style="background:#28a745">Download
+                        WASM</button></a>
+            </div>
+        </div>
+        <div id="editor"></div>
+        <div id="result-area"
+            style="height: 200px; background: #222; color: #fff; padding: 10px; overflow-y: auto; font-family: monospace; border-top: 1px solid #444; display: none;">
+        </div>
+    </div>
+
+    <script>
+        let editor;
+        let currentFilename = null;
+
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs' } });
+        require(['vs/editor/editor.main'], function () {
+            editor = monaco.editor.create(document.getElementById('editor'), {
+                value: '// Select a file to start editing',
+                language: 'rust',
+                theme: 'vs-dark'
+            });
+
+            refreshFileList();
+        });
+
+        async function refreshFileList() {
+            const res = await fetch('/files');
+            const files = await res.json();
+            const list = document.getElementById('file-list');
+            list.innerHTML = '';
+            files.forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'file-item';
+                div.innerText = f;
+                div.onclick = () => loadFile(f);
+                list.appendChild(div);
+            });
+
+            // Auto open pii_detector.rs if just starting and no file selected
+            if (!currentFilename && files.includes('pii_detector.rs')) {
+                loadFile('pii_detector.rs');
+            }
+        }
+
+        async function loadFile(filename) {
+            currentFilename = filename;
+            document.getElementById('current-file').innerText = filename;
+            const res = await fetch(`/load?filename=${filename}`);
+            const content = await res.text();
+            editor.setValue(content);
+            checkStatus();
+            document.getElementById('result-area').style.display = 'none';
+        }
+
+        async function createNewFile() {
+            const name = document.getElementById('new-filename').value;
+            if (name) {
+                await fetch('/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: name, content: '' })
+                });
+                document.getElementById('new-filename').value = '';
+                await refreshFileList();
+                loadFile(name.endsWith('.rs') ? name : name + '.rs');
+            }
+        }
+
+        async function saveFile() {
+            if (!currentFilename) return;
+
+            document.getElementById('status-display').innerText = 'Saving...';
+            document.getElementById('status-display').className = 'status pending';
+            document.getElementById('submit-btn').style.display = 'none';
+            document.getElementById('download-link').style.display = 'none';
+            document.getElementById('result-area').style.display = 'none';
+
+            await fetch('/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    filename: currentFilename,
+                    content: editor.getValue()
+                })
+            });
+
+            document.getElementById('status-display').innerText = 'Compiling...';
+            pollStatus();
+        }
+
+        let pollInterval;
+        function pollStatus() {
+            if (pollInterval) clearInterval(pollInterval);
+            let attempts = 0;
+            const resultArea = document.getElementById('result-area');
+
+            pollInterval = setInterval(async () => {
+                const res = await fetch(`/status?filename=${currentFilename}`);
+                const data = await res.json();
+                attempts++;
+
+                if (data.status === 'ready') {
+                    document.getElementById('status-display').innerText = 'Ready';
+                    document.getElementById('status-display').className = 'status ready';
+
+                    const wasmName = currentFilename.replace('.rs', '.wasm');
+                    const link = document.getElementById('download-link');
+                    link.href = `/download/${wasmName}`;
+                    link.style.display = 'inline-block';
+                    document.getElementById('submit-btn').style.display = 'inline-block';
+
+                    // Clear logs if any
+                    resultArea.style.display = 'none';
+
+                    clearInterval(pollInterval);
+                } else if (data.status === 'error') {
+                    document.getElementById('status-display').innerText = 'Compilation Failed';
+                    document.getElementById('status-display').className = 'status pending'; // Use pending color (orange/red)
+                    document.getElementById('status-display').style.color = 'red';
+
+                    resultArea.style.display = 'block';
+                    resultArea.innerHTML = `<strong>Compilation Error:</strong><br><pre>${data.log}</pre>`;
+
+                    clearInterval(pollInterval);
+                } else if (data.status === 'compiling') {
+                    document.getElementById('status-display').innerText = 'Compiling...';
+                    // Optional: show live logs?
+                } else if (attempts > 60) { // 60 seconds timeout
+                    document.getElementById('status-display').innerText = 'Timeout waiting for compiler';
+                    clearInterval(pollInterval);
+                }
+            }, 1000);
+        }
+
+        async function submitToTee() {
+            if (!currentFilename) return;
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerText = "Submitting...";
+
+            const resultArea = document.getElementById('result-area');
+            resultArea.style.display = 'block';
+            resultArea.innerText = 'Submitting to Data Provider...';
+
+            try {
+                const res = await fetch('/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: currentFilename })
+                });
+                const data = await res.json();
+
+                resultArea.innerHTML = `<strong>Response:</strong><br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+
+            } catch (e) {
+                resultArea.innerText = "Error submitting: " + e;
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Submit to TEE";
+            }
+        }
+
+        function checkStatus() {
+            if (pollInterval) clearInterval(pollInterval);
+            document.getElementById('download-link').style.display = 'none';
+            document.getElementById('submit-btn').style.display = 'none';
+            document.getElementById('status-display').innerText = '';
+        }
+    </script>
+</body>
+
+</html>

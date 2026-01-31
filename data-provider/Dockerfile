@@ -17,6 +17,11 @@ RUN apt-get update && apt-get install -y \
 # Install Python dependencies
 RUN pip3 install flask cryptography pynacl requests datasets
 
+# Install Node.js (for ZK proof generation)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    npm install -g snarkjs circomlibjs
+
 # =============================================================================
 # Build WAMR (WebAssembly Micro Runtime)
 # We're building in interpreter mode for simplicity - no SGX hardware needed

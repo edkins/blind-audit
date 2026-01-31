@@ -1,0 +1,1 @@
+fn main() { syntax error here }
