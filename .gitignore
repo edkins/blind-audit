@@ -1,3 +1,7 @@
 /compiled-wasm/
 /.env
 /img
+.terraform
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup

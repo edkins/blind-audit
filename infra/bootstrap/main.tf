@@ -36,7 +36,7 @@ variable "aws_region" {
 variable "project_name" {
   description = "Project name for tagging"
   type        = string
-  default     = "tee-hackathon"
+  default     = "blind-audit"
 }
 
 variable "github_repo" {

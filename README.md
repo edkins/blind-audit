@@ -2,6 +2,21 @@
 
 A web application running on AWS with Nitro Enclaves for trusted execution, Cognito authentication via ALB, and automated deployments via GitHub Actions.
 
+## Deployment workflow (AWS)
+
+```
+You (one time):
+  terraform apply  →  Creates VPC, ALB, Cognito, EC2, etc.
+                      State saved locally in terraform.tfstate
+
+GitHub Actions (on every push):
+  docker build     →  Build containers
+  docker push      →  Push to ECR
+  ssm send-command →  Tell EC2 to pull & restart
+```
+
+Note: the `terraform apply` uses *local state* so you'll need to change this if updating the infrastructure between machines/users. GitHub itself does not make use of terraform, only ssm.
+
 ## Architecture
 
 ```
@@ -39,10 +54,10 @@ A web application running on AWS with Nitro Enclaves for trusted execution, Cogn
 
 ## Prerequisites
 
-- AWS account
-- Terraform >= 1.0
-- AWS CLI configured locally
-- GitHub repository (fork or clone this one)
+- [AWS account](https://signin.aws.amazon.com/signup?request_type=register)
+- [Terraform >= 1.0](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
+- [AWS CLI configured locally](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- GitHub repository (fork this one)
 - A domain name (Route 53 registered, or elsewhere with ability to update nameservers)
 
 ## Setup
@@ -51,7 +66,9 @@ A web application running on AWS with Nitro Enclaves for trusted execution, Cogn
 
 This creates the OIDC provider and IAM role that allows GitHub Actions to deploy to your AWS account without long-lived credentials.
 
-If you're not comfortable running terraform locally with your AWS credentials, you'll need to configure some other mechanism for GitHub to connect to your AWS account securely.
+You will first need to set up an iam user for terraform to use (an admin user will work fine, or you can use the slightly more locked down one as shown in `infra/terraform-user-policy.json`). Set up the correct access/secret key with `aws configure` before starting.
+
+You can also check which aws iam user is configured locally with the command `aws sts get-caller-identity`.
 
 ```bash
 cd infra/bootstrap

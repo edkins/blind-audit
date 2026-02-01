@@ -16,11 +16,11 @@ create_hosted_zone = false
 aws_region = "us-east-2"
 
 # Project name (used for resource naming)
-project_name = "tee-hackathon"
+project_name = "blind-audit"
 
 # EC2 instance type (must support Nitro Enclaves)
 # See: https://docs.aws.amazon.com/enclaves/latest/user/nitro-enclave.html
-instance_type = "m5.xlarge"
+instance_type = "c8i.xlarge"
 
 # Enclave resource allocation
 enclave_cpu_count  = 2

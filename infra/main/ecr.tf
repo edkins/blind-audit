@@ -4,7 +4,7 @@ resource "aws_ecr_repository" "enclave" {
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
-    scan_on_push = false # Disable for hackathon speed
+    scan_on_push = true
   }
 
   tags = {
@@ -18,7 +18,7 @@ resource "aws_ecr_repository" "webserver" {
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
-    scan_on_push = false
+    scan_on_push = true
   }
 
   tags = {
