@@ -18,6 +18,13 @@
 #include <openssl/sha.h>
 #include <cbor.h>
 
+/* WASM Runtime Function Declarations */
+int wasm_runtime_setup(void);
+void wasm_runtime_teardown(void);
+int wasm_load_module(const uint8_t* bytes, uint32_t len);
+int wasm_call_check_document(const uint8_t* doc, uint32_t len);
+void wasm_unload_module(void);
+
 #define LISTEN_PORT 5000
 #define BUFFER_SIZE (16 * 1024 * 1024)  /* 16 MB max message size */
 #define NSM_DEVICE_PATH "/dev/nsm"
@@ -332,11 +339,24 @@ static int handle_request(int client_fd, uint8_t *buffer) {
     uint8_t wasm_hash[32];
     sha256(wasm_data, wasm_len, wasm_hash);
     
+    /* Load WASM module */
+    if (wasm_load_module(wasm_data, wasm_len) != 0) {
+        fprintf(stderr, "Failed to load WASM module\n");
+        return -1;
+    }
+    fprintf(stderr, "WASM module loaded\n");
+    
     /* Parse documents */
     uint32_t num_docs = read_u32_be(buffer + offset);
     offset += 4;
     
     fprintf(stderr, "Number of documents: %u\n", num_docs);
+    
+    /* Track flagged documents */
+    uint32_t unsafe_count = 0;
+    uint32_t first_flagged_index = 0;
+    uint8_t first_flagged_hash[32];
+    bool has_flagged = false;
     
     /* Hash all documents (hash of hashes) */
     SHA256_CTX docs_ctx;
@@ -356,20 +376,39 @@ static int handle_request(int client_fd, uint8_t *buffer) {
         
         fprintf(stderr, "  Document %u: %u bytes\n", i, doc_len);
         
-        /* 
-         * TODO: Here you would run the WASM module against this document
-         * using WAMR. For now, we just hash everything.
-         */
+        /* Run WASM challenger on this document */
+        int wasm_result = wasm_call_check_document(doc_data, doc_len);
+        
+        if (wasm_result > 0) {
+            fprintf(stderr, "  Document %u flagged as UNSAFE\n", i);
+            unsafe_count++;
+            
+            /* Track first flagged document */
+            if (!has_flagged) {
+                has_flagged = true;
+                first_flagged_index = i;
+                memcpy(first_flagged_hash, doc_hash, 32);
+            }
+        } else if (wasm_result == 0) {
+            fprintf(stderr, "  Document %u: safe\n", i);
+        } else {
+            fprintf(stderr, "  WARNING: WASM error checking document %u\n", i);
+        }
     }
     
     uint8_t documents_hash[32];
     SHA256_Final(documents_hash, &docs_ctx);
     
-    /* 
-     * TODO: Replace this with actual WASM execution results
-     * This is where your WAMR harness logic would go
-     */
-    const char *result = "DUMMY_RESULT: All documents processed successfully";
+    /* Unload WASM module */
+    wasm_unload_module();
+    fprintf(stderr, "WASM module unloaded\n");
+    
+    /* Build result string */
+    char result_buf[256];
+    snprintf(result_buf, sizeof(result_buf), 
+             "Documents processed: %u total, %u flagged unsafe", 
+             num_docs, unsafe_count);
+    const char *result = result_buf;
     size_t result_len = strlen(result);
     
     /* Prepare user data for attestation (combine hashes + result hash) */
@@ -416,6 +455,16 @@ static int handle_request(int client_fd, uint8_t *buffer) {
     memcpy(response + resp_offset, result, result_len);
     resp_offset += result_len;
     
+    /* Flagged document info */
+    write_u32_be(response + resp_offset, has_flagged ? 1 : 0);
+    resp_offset += 4;
+    if (has_flagged) {
+        write_u32_be(response + resp_offset, first_flagged_index);
+        resp_offset += 4;
+        memcpy(response + resp_offset, first_flagged_hash, 32);
+        resp_offset += 32;
+    }
+    
     /* Attestation document */
     write_u32_be(response + resp_offset, attestation_len);
     resp_offset += 4;
@@ -452,6 +501,13 @@ int main(int argc, char *argv[]) {
     }
     
     fprintf(stderr, "Enclave server starting...\n");
+    
+    /* Initialize WASM runtime */
+    if (wasm_runtime_setup() != 0) {
+        fprintf(stderr, "Failed to initialize WASM runtime\n");
+        return 1;
+    }
+    fprintf(stderr, "WASM runtime initialized\n");
     
     /* Allocate buffer */
     uint8_t *buffer = malloc(BUFFER_SIZE);
@@ -508,5 +564,9 @@ int main(int argc, char *argv[]) {
     
     free(buffer);
     close(listen_fd);
+    
+    /* Cleanup WASM runtime */
+    wasm_runtime_teardown();
+    
     return 0;
 }
