@@ -80,6 +80,10 @@ When a challenge completes, the Data Provider creates:
     "challenger_nonce": "<freshness proof>",
     "timestamp": "2024-..."
   },
+  "zk_proof": {
+    "proof": { ... },
+    "publicSignals": [ "<merkle_root>" ]
+  },
   "signature": "<signed with TEE key>",
   "cert_chain": "<TEE cert -> Intermediate>",
   "wasm_module": "<base64 WASM>",
@@ -158,7 +162,6 @@ Place documents in `shared/dataset/`. The Data Provider will compute a Merkle ro
 ## Limitations & Future Work
 
 - **No real SGX**: This is a simulation. Real hardware attestation requires SGX-capable CPUs.
-- **Simple Merkle tree**: Production would use a proper Merkle tree with proofs.
 - **Single document output**: Currently only one flagged document is sent to Judge.
 - **No rate limiting**: A real system would limit challenge frequency.
 - **Randomness**: The random document selection should use verifiable randomness.
@@ -166,3 +169,13 @@ Place documents in `shared/dataset/`. The Data Provider will compute a Merkle ro
 ## License
 
 MIT - For hackathon/educational purposes.
+
+## Zero Knowledge Proofs (ZKP)
+
+This project integrates ZKPs to prove **Data Provenance**. When a document is flagged as unsafe:
+
+1.  **Circuit**: A `circom` circuit (`merkle_proof.circom`) proves that a specific document hash exists in the dataset's Merkle Tree.
+2.  **Privacy**: The proof reveals *only* the specific document and the Merkle Root, keeping the rest of the dataset path and siblings private.
+3.  **Tooling**: Uses `snarkjs` and `circomlib` for trusted setup, proof generation, and verification.
+
+Artifacts are generated in `zk-circuit/` and mounted into services.

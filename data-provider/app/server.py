@@ -487,15 +487,29 @@ def submit_challenge():
                     zkey_path
                 ]
                 
-                proof_result = subprocess.run(
-                    proof_cmd,
-                    capture_output=True,
-                    text=True,
-                    check=True
-                )
+                # Use temp file for output to avoid pipe deadlocks
+                with tempfile.NamedTemporaryFile(mode='w+', delete=False) as out_f:
+                    app.logger.info(f"Command inputs: {proof_cmd}")
+                    subprocess.run(
+                        proof_cmd,
+                        stdout=out_f,
+                        stderr=subprocess.STDOUT, # Merge stderr to avoid pipe deadlock
+                        stdin=subprocess.DEVNULL, # Detach stdin
+                        text=True,
+                        check=True,
+                        timeout=300
+                    )
+                    out_f.seek(0)
+                    zk_proof_output = out_f.read()
                 
+                # Cleanup temp file
+                try:
+                    os.unlink(out_f.name)
+                except:
+                    pass
+
                 # Output should be JSON {proof: ..., publicSignals: ...}
-                zk_proof = json.loads(proof_result.stdout.strip())
+                zk_proof = json.loads(zk_proof_output.strip())
                 app.logger.info("ZK Proof generated successfully")
                 
             except Exception as e:

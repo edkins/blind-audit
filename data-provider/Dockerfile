@@ -19,8 +19,12 @@ RUN pip3 install flask cryptography pynacl requests datasets
 
 # Install Node.js (for ZK proof generation)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs && \
-    npm install -g snarkjs circomlibjs
+    apt-get install -y nodejs
+
+# Install Python dependencies
+RUN pip3 install flask cryptography pynacl requests datasets
+
+
 
 # =============================================================================
 # Build WAMR (WebAssembly Micro Runtime)
@@ -51,6 +55,9 @@ RUN cp build/iwasm /usr/local/bin/
 WORKDIR /app
 
 COPY app/ /app/
+
+# Install Node modules locally
+RUN npm init -y && npm install snarkjs circomlibjs && ls -la /app/node_modules
 
 # Create directories
 RUN mkdir -p /data /challenges /results
