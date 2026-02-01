@@ -174,6 +174,7 @@ int wasm_call_check_document(const uint8_t* doc, uint32_t len) {
         fprintf(stderr, "[wasm] Failed to allocate %u bytes in WASM memory\n", len);
         return -1;
     }
+    fprintf(stderr, "[wasm] Allocated %u bytes in WASM memory at 0x%llx\n", len, (unsigned long long)wasm_ptr);
     
     /* Copy document into WASM memory */
     memcpy(native_ptr, doc, len);
@@ -184,12 +185,14 @@ int wasm_call_check_document(const uint8_t* doc, uint32_t len) {
     argv[1] = len;
     
     /* Call the function */
+    fprintf(stderr, "[wasm] Copied document into WASM memory. About to call wasm\n");
     if (!wasm_runtime_call_wasm(g_exec_env, g_check_document_func, 2, argv)) {
         const char* exception = wasm_runtime_get_exception(g_module_inst);
         fprintf(stderr, "[wasm] Call failed: %s\n", exception ? exception : "unknown");
         wasm_runtime_module_free(g_module_inst, wasm_ptr);
         return -1;
     }
+    fprintf(stderr, "[wasm] WASM call completed\n");
     
     /* Get return value (stored in argv[0]) */
     int32_t result = (int32_t)argv[0];

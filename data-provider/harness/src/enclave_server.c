@@ -338,6 +338,12 @@ static int handle_request(int client_fd, uint8_t *buffer) {
     /* Hash the WASM module */
     uint8_t wasm_hash[32];
     sha256(wasm_data, wasm_len, wasm_hash);
+
+    fprintf(stderr, "WASM module hash: ");
+    for (int i = 0; i < 32; i++) {
+        fprintf(stderr, "%02x", wasm_hash[i]);
+    }
+    fprintf(stderr, "\n");
     
     /* Load WASM module */
     if (wasm_load_module(wasm_data, wasm_len) != 0) {
