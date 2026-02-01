@@ -136,8 +136,8 @@ RUN mkdir -p /data/dataset /data/challengers /data/output
 WORKDIR /data
 
 # Default entrypoint
-ENTRYPOINT ["harness-cli"]
-CMD ["--help"]
+CMD harness-cli --help && sleep 300
+# CMD echo "Hello from enclave!" && sleep 300
 
 # ============================================================================
 # Development image (includes build tools)
