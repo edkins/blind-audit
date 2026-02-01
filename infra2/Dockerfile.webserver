@@ -1,0 +1,21 @@
+# Dockerfile.webserver
+# This builds the web server that runs on the EC2 instance (outside the enclave)
+# and communicates with the enclave via vsock.
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies
+COPY webserver/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY webserver/ .
+
+# Expose port for ALB health checks and traffic
+EXPOSE 8000
+
+# The webserver entry point
+# ENCLAVE_CID environment variable is set by the deploy script
+CMD ["python", "main.py"]

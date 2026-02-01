@@ -1,0 +1,19 @@
+# Dockerfile.enclave
+# This builds the image that runs inside the Nitro Enclave
+#
+# The enclave runs in complete isolation - no network, no disk.
+# Communication happens via vsock to the parent instance.
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies
+COPY enclave/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY enclave/ .
+
+# The enclave entry point
+CMD ["python", "main.py"]

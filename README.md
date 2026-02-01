@@ -1,181 +1,243 @@
-# TEE Hackathon: AI Governance Challenge Framework
+# TEE Hackathon
 
-A demonstration framework for proving dataset safety using Trusted Execution Environments (TEEs).
-
-## Overview
-
-This project demonstrates a protocol where:
-
-1. A **Data Provider** holds a private dataset and wants to prove it's "safe"
-2. A **Challenger** writes detection scripts (as WebAssembly modules) to find unsafe content
-3. The script runs inside a TEE, producing a signed attestation of results
-4. A **Judge** (LLM-powered) verifies attestations and evaluates flagged documents
-5. **Everyone** can see the public results
-
-```
-┌─────────────────┐     ┌─────────────────┐     ┌───────────────┐
-│  Data Provider  │     │     Judge       │     │   Challenger  │
-│  (TEE Host)     │────▶│  (Verifier)     │     │   (Auditor)   │
-│                 │     │                 │     │               │
-│  Port 8080      │     │  Port 8081      │     │  Browser      │
-└─────────────────┘     └────────┬────────┘     └───────────────┘
-                                 │
-                        ┌────────▼────────┐
-                        │  Results Board  │
-                        │  Port 8082      │
-                        └─────────────────┘
-```
-
-## Quick Start
-
-```bash
-# Build everything
-./run.sh build
-
-# Start services
-./run.sh start
-
-# View logs
-./run.sh logs
-```
-
-Then open:
-- http://localhost:8080 - Submit challenges
-- http://localhost:8082 - View results
+A web application running on AWS with Nitro Enclaves for trusted execution, Cognito authentication via ALB, and automated deployments via GitHub Actions.
 
 ## Architecture
 
-### Components
-
-| Service | Port | Purpose |
-|---------|------|---------|
-| Data Provider | 8080 | Hosts dataset, runs WASM challenges in TEE, signs attestations |
-| Judge | 8081 | Verifies attestations, evaluates flagged docs with LLM |
-| Results Board | 8082 | Public display of all challenge results |
-
-### Trust Model
-
 ```
-Demo Root CA
-    │
-    └── Attestation Authority (Intermediate)
-            │
-            └── TEE Signing Key (Data Provider)
-```
-
-- **Judge** trusts only the Root CA certificate
-- **Data Provider** has the TEE signing key
-- **Challengers** trust the Judge (and by extension, the PKI)
-
-### Attestation Package
-
-When a challenge completes, the Data Provider creates:
-
-```json
-{
-  "quote": {
-    "mrenclave": "<hash of WASM module>",
-    "dataset_merkle_root": "<hash of dataset>",
-    "result_document_hash": "<hash of flagged doc or null>",
-    "challenger_nonce": "<freshness proof>",
-    "timestamp": "2024-..."
-  },
-  "zk_proof": {
-    "proof": { ... },
-    "publicSignals": [ "<merkle_root>" ]
-  },
-  "signature": "<signed with TEE key>",
-  "cert_chain": "<TEE cert -> Intermediate>",
-  "wasm_module": "<base64 WASM>",
-  "document": "<the flagged document, if any>"
-}
+┌─────────────────────────────────────────────────────────────────┐
+│                           Internet                              │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Application Load Balancer                    │
+│                    (Public Subnets, HTTPS)                      │
+│                                                                 │
+│   ┌──────────────────────────────────────────────────────────┐  │
+│   │                  Cognito Authentication                  │  │
+│   │            (Redirects unauthenticated users)             │  │
+│   └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼ (authenticated requests only)
+┌─────────────────────────────────────────────────────────────────┐
+│                        Private Subnet                           │
+│                                                                 │
+│   ┌──────────────────────────────────────────────────────────┐  │
+│   │                     EC2 Instance                         │  │
+│   │                                                          │  │
+│   │   ┌─────────────────┐      vsock      ┌───────────────┐  │  │
+│   │   │   Web Server    │◄───────────────►│  Nitro        │  │  │
+│   │   │   (Docker)      │                 │  Enclave      │  │  │
+│   │   │   Port 8000     │                 │  (Isolated)   │  │  │
+│   │   └─────────────────┘                 └───────────────┘  │  │
+│   │                                                          │  │
+│   └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## Writing Challenge Modules
+## Prerequisites
 
-Challenge modules are WebAssembly binaries that:
+- AWS account
+- Terraform >= 1.0
+- AWS CLI configured locally
+- GitHub repository (fork or clone this one)
+- A domain name (Route 53 registered, or elsewhere with ability to update nameservers)
 
-1. Read JSON lines from stdin:
-   ```json
-   {"filename": "doc.txt", "hash": "abc123...", "content": "<base64>"}
-   ```
+## Setup
 
-2. Output results to stdout:
-   - `UNSAFE:<filename>` for each unsafe document
-   - `SAFE` if no unsafe documents found
+### 1. Bootstrap AWS ↔ GitHub trust
 
-### Example (Rust)
+This creates the OIDC provider and IAM role that allows GitHub Actions to deploy to your AWS account without long-lived credentials.
 
-See `shared/sample-challenges/pii_detector.rs` for a complete example.
-
-Compile with:
-```bash
-rustup target add wasm32-wasi
-cargo build --target wasm32-wasi --release
-```
-
-## Simulation vs Real TEE
-
-This demo uses **simulated** TEE execution:
-
-| Aspect | Simulation | Real SGX |
-|--------|------------|----------|
-| Code runs | In regular process | In hardware enclave |
-| Attestation | Signed with software key | Signed by CPU |
-| Trust | Demo PKI | Intel's PKI |
-| Cheating | Data Provider could lie | Hardware prevents lying |
-
-For a hackathon demo, simulation is sufficient to demonstrate the **protocol**. In production, you'd use real SGX hardware (available on Azure DCsv2/v3 VMs).
-
-## Configuration
-
-### Environment Variables
-
-Create a `.env` file:
+If you're not comfortable running terraform locally with your AWS credentials, you'll need to configure some other mechanism for GitHub to connect to your AWS account securely.
 
 ```bash
-# For LLM-based document evaluation
-ANTHROPIC_API_KEY=sk-ant-...
-# Or
-OPENAI_API_KEY=sk-...
+cd infra/bootstrap
+
+terraform init
+terraform apply -var="github_repo=YOUR_USERNAME/YOUR_REPO"
 ```
 
-Without an API key, the Judge will mark documents as "UNKNOWN" instead of evaluating them.
+Save the `github_actions_role_arn` output - you'll need it for GitHub configuration.
 
-### Dataset
+### 2. Configure your domain
 
-Place documents in `shared/dataset/`. The Data Provider will compute a Merkle root of all files.
+Copy the example variables file:
+
+```bash
+cd infra/main
+cp example.tfvars terraform.tfvars
+```
+
+Edit `terraform.tfvars`:
+
+```hcl
+# Your domain
+domain_name = "yourdomain.com"
+
+# Optional: use a subdomain (e.g., "app" for app.yourdomain.com)
+app_subdomain = ""
+
+# If your domain is registered in Route 53, set this to false
+# If registered elsewhere (GoDaddy, Namecheap, etc.), set to true
+create_hosted_zone = false
+```
+
+### 3. Deploy infrastructure
+
+```bash
+terraform init
+terraform apply
+```
+
+This creates:
+- VPC with public/private subnets
+- NAT Gateway and VPC endpoints for SSM
+- Route 53 DNS records
+- ACM certificate (automatically validated via DNS)
+- Cognito User Pool with hosted UI
+- Application Load Balancer with Cognito authentication
+- ECR repositories for container images
+- EC2 instance with Nitro Enclave support
+
+**If you set `create_hosted_zone = true`**: Terraform will output nameservers. Update your domain registrar to use these nameservers, then wait for propagation (can take up to 48 hours, usually much faster).
+
+Note the outputs, especially:
+- `instance_id` - for GitHub configuration
+- `app_url` - to access your application
+- `cognito_domain` - to manage users
+
+### 3. Configure GitHub
+
+Go to your repository → Settings → Secrets and variables → Actions
+
+**Secrets:**
+| Name | Value |
+|------|-------|
+| `AWS_ROLE_ARN` | The role ARN from bootstrap output |
+
+**Variables:**
+| Name | Value |
+|------|-------|
+| `AWS_REGION` | `us-east-2` (or your region) |
+| `INSTANCE_ID` | The instance ID from main output |
+| `ENCLAVE_REPO` | `tee-hackathon-enclave` |
+| `WEBSERVER_REPO` | `tee-hackathon-webserver` |
+
+### 4. Create a Cognito user
+
+Go to the AWS Console → Cognito → User Pools → your pool → Users → Create user
+
+Or use the CLI:
+```bash
+aws cognito-idp admin-create-user \
+  --user-pool-id YOUR_POOL_ID \
+  --username your@email.com \
+  --temporary-password TempPass123! \
+  --user-attributes Name=email,Value=your@email.com Name=email_verified,Value=true
+```
+
+### 5. Deploy!
+
+Push to `main` and GitHub Actions will:
+1. Build the enclave and webserver Docker images
+2. Push them to ECR
+3. Deploy to the EC2 instance via SSM
+
+Or trigger manually from Actions → Deploy → Run workflow (with optional debug mode).
 
 ## Development
 
+### Local testing
+
+The webserver can run locally (without the enclave):
+
 ```bash
-# Rebuild after code changes
-./run.sh build
-
-# Reset PKI (regenerate certificates)
-./run.sh reset-pki
-
-# Clean everything
-./run.sh clean
+cd webserver
+pip install -r requirements.txt
+ENCLAVE_CID=16 python main.py
 ```
 
-## Limitations & Future Work
+### Connecting to the instance
 
-- **No real SGX**: This is a simulation. Real hardware attestation requires SGX-capable CPUs.
-- **Single document output**: Currently only one flagged document is sent to Judge.
-- **No rate limiting**: A real system would limit challenge frequency.
-- **Randomness**: The random document selection should use verifiable randomness.
+```bash
+aws ssm start-session --target INSTANCE_ID --region us-east-2
+```
+
+### Viewing enclave logs (debug mode only)
+
+```bash
+nitro-cli console --enclave-id $(nitro-cli describe-enclaves | jq -r '.[0].EnclaveID')
+```
+
+### Manual deployment
+
+SSH/SSM into the instance and run:
+```bash
+export IMAGE_TAG=latest
+export DEBUG_MODE=true
+/home/ec2-user/deploy.sh
+```
+
+## Project structure
+
+```
+.
+├── .github/workflows/deploy.yml   # CI/CD pipeline
+├── infra/
+│   ├── bootstrap/                 # One-time OIDC setup
+│   │   ├── main.tf
+│   │   └── oidc.tf
+│   └── main/                      # Main infrastructure
+│       ├── main.tf
+│       ├── variables.tf
+│       ├── example.tfvars         # Copy to terraform.tfvars
+│       ├── vpc.tf
+│       ├── dns.tf                 # Route 53 + ACM certificate
+│       ├── cognito.tf
+│       ├── alb.tf
+│       ├── ecr.tf
+│       ├── iam.tf
+│       ├── ec2.tf
+│       ├── user_data.sh
+│       └── outputs.tf
+├── enclave/                       # Enclave application
+│   ├── main.py
+│   └── requirements.txt
+├── webserver/                     # Web server application
+│   ├── main.py
+│   └── requirements.txt
+├── Dockerfile.enclave
+├── Dockerfile.webserver
+└── README.md
+```
+
+## Security notes
+
+- The EC2 instance has no public IP and is only accessible via the ALB or SSM
+- All traffic to the ALB requires Cognito authentication (except `/health`)
+- The enclave runs in complete isolation with no network or disk access
+- Communication between webserver and enclave is via vsock only
+- Debug mode should be disabled for production (attestation will indicate debug)
+
+## Troubleshooting
+
+**Deployment fails with "Enclave memory/CPU allocation failed"**
+- The instance type might not have enough resources
+- Check that the allocator is running: `systemctl status nitro-enclaves-allocator`
+- Check allocation: `cat /etc/nitro_enclaves/allocator.yaml`
+
+**Can't connect to the app**
+- Check the target group health in the EC2 console
+- Ensure the webserver is running: `docker ps`
+- Check logs: `docker logs webserver`
+
+**Cognito login redirects in a loop**
+- Verify the callback URL matches: `https://YOUR_ALB_DNS/oauth2/idpresponse`
+- Check the Cognito app client settings
 
 ## License
 
-MIT - For hackathon/educational purposes.
-
-## Zero Knowledge Proofs (ZKP)
-
-This project integrates ZKPs to prove **Data Provenance**. When a document is flagged as unsafe:
-
-1.  **Circuit**: A `circom` circuit (`merkle_proof.circom`) proves that a specific document hash exists in the dataset's Merkle Tree.
-2.  **Privacy**: The proof reveals *only* the specific document and the Merkle Root, keeping the rest of the dataset path and siblings private.
-3.  **Tooling**: Uses `snarkjs` and `circomlib` for trusted setup, proof generation, and verification.
-
-Artifacts are generated in `zk-circuit/` and mounted into services.
+MIT

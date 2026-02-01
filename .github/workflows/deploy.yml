@@ -1,0 +1,144 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      debug_mode:
+        description: 'Run enclave in debug mode'
+        type: boolean
+        default: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      image_tag: ${{ github.sha }}
+      ecr_registry: ${{ steps.get-account.outputs.registry }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get AWS account ID
+        id: get-account
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "registry=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com" >> $GITHUB_OUTPUT
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push enclave image
+        env:
+          ECR_REGISTRY: ${{ steps.get-account.outputs.registry }}
+          ENCLAVE_REPO: ${{ vars.ENCLAVE_REPO }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ENCLAVE_REPO:${{ github.sha }} -f Dockerfile.enclave .
+          docker push $ECR_REGISTRY/$ENCLAVE_REPO:${{ github.sha }}
+
+      - name: Build and push webserver image
+        env:
+          ECR_REGISTRY: ${{ steps.get-account.outputs.registry }}
+          WEBSERVER_REPO: ${{ vars.WEBSERVER_REPO }}
+        run: |
+          docker build -t $ECR_REGISTRY/$WEBSERVER_REPO:${{ github.sha }} -f Dockerfile.webserver .
+          docker push $ECR_REGISTRY/$WEBSERVER_REPO:${{ github.sha }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy via SSM
+        env:
+          INSTANCE_ID: ${{ vars.INSTANCE_ID }}
+          IMAGE_TAG: ${{ github.sha }}
+          DEBUG_MODE: ${{ inputs.debug_mode || 'false' }}
+          ENCLAVE_REPO: ${{ vars.ENCLAVE_REPO }}
+          WEBSERVER_REPO: ${{ vars.WEBSERVER_REPO }}
+        run: |
+          echo "Deploying $IMAGE_TAG to instance $INSTANCE_ID"
+          
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --timeout-seconds 600 \
+            --parameters "commands=[
+              'export IMAGE_TAG=$IMAGE_TAG',
+              'export DEBUG_MODE=$DEBUG_MODE',
+              'export ENCLAVE_REPO=$ENCLAVE_REPO',
+              'export WEBSERVER_REPO=$WEBSERVER_REPO',
+              '/home/ec2-user/deploy.sh'
+            ]" \
+            --query 'Command.CommandId' --output text)
+
+          echo "Command ID: $COMMAND_ID"
+          echo "Waiting for deployment to complete..."
+
+          # Poll for completion
+          for i in {1..60}; do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "$INSTANCE_ID" \
+              --query 'Status' --output text 2>/dev/null || echo "Pending")
+
+            echo "Status: $STATUS"
+
+            if [ "$STATUS" = "Success" ]; then
+              echo ""
+              echo "=========================================="
+              echo "Deployment succeeded!"
+              echo "=========================================="
+              aws ssm get-command-invocation \
+                --command-id "$COMMAND_ID" \
+                --instance-id "$INSTANCE_ID" \
+                --query 'StandardOutputContent' --output text
+              exit 0
+            elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ] || [ "$STATUS" = "TimedOut" ]; then
+              echo ""
+              echo "=========================================="
+              echo "Deployment failed!"
+              echo "=========================================="
+              echo "STDOUT:"
+              aws ssm get-command-invocation \
+                --command-id "$COMMAND_ID" \
+                --instance-id "$INSTANCE_ID" \
+                --query 'StandardOutputContent' --output text || true
+              echo ""
+              echo "STDERR:"
+              aws ssm get-command-invocation \
+                --command-id "$COMMAND_ID" \
+                --instance-id "$INSTANCE_ID" \
+                --query 'StandardErrorContent' --output text || true
+              exit 1
+            fi
+
+            sleep 10
+          done
+
+          echo "Timeout waiting for deployment"
+          exit 1
