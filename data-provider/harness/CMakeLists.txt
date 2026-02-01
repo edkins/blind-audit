@@ -57,7 +57,7 @@ include(${WAMR_ROOT}/build-scripts/runtime_lib.cmake)
 set(HARNESS_SOURCES
     src/harness.c
     src/wasm_runtime.c
-    src/main.c
+    src/enclave_server.c
 )
 
 if(SGX_MODE)

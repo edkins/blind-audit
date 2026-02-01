@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     curl \
     libssl-dev \
+    libcbor-dev \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
@@ -98,13 +99,13 @@ RUN gcc -O2 -Wall \
 
 RUN gcc -O2 -Wall \
     -I./include \
-    -c src/main.c -o main.o
+    -c src/enclave_server.c -o enclave_server.o
 
 # Link everything
 RUN gcc -o harness-cli \
-    harness.o wasm_runtime.o crypto_sim.o main.o \
+    harness.o wasm_runtime.o crypto_sim.o enclave_server.o \
     /opt/wamr/product-mini/platforms/linux/build/libvmlib.a \
-    -lssl -lcrypto -lpthread -lm -ldl
+    -lssl -lcrypto -lpthread -lm -ldl -lcbor
 
 # Compile the sample PII detector WASM
 RUN /opt/wasi-sdk/bin/clang \
@@ -123,6 +124,7 @@ FROM ubuntu:22.04 AS runtime
 RUN apt-get update && apt-get install -y \
     libssl3 \
     ca-certificates \
+    libcbor0.8  \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy artifacts from builder
