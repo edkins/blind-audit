@@ -501,26 +501,23 @@ def submit_attestation():
                     pub_path = f_pub.name
                     
                 with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f_proof:
-                    json.dump(zk_proof['proof'], f_proof) # snarkjs verify expects full proof object (which we stored)
-                    # Wait, our zk_bridge.js output {proof: ..., publicSignals: ...}
-                    # We stored the whole thing in zk_proof?
-                    # dataset.py: zk_proof = json.loads(...) -> {proof, publicSignals}
-                    # created quote with zk_proof=zk_proof.
-                    # So quote['zk_proof'] has 'proof' key.
-                    # snarkjs verify expects the content of 'proof' key as the proof.json
+                    # snarkjs verify expects the content of the 'proof' key as the proof.json
                     json.dump(zk_proof['proof'], f_proof)
                     proof_path = f_proof.name
 
                 vk_path = "/app/zk_artifacts/verification_key.json"
                 
                 app.logger.info("Verifying ZK Proof...")
-                verify_cmd = ['snarkjs', 'groth16', 'verify', vk_path, pub_path, proof_path]
+                verify_cmd = ['/app/node_modules/.bin/snarkjs', 'groth16', 'verify', vk_path, pub_path, proof_path]
                 
-                subprocess.run(verify_cmd, check=True, capture_output=True)
+                result = subprocess.run(verify_cmd, check=True, capture_output=True, text=True)
                 app.logger.info("ZK Proof Verified Successfully!")
+                app.logger.debug(f"Verify Output: {result.stdout}")
                 
             except subprocess.CalledProcessError as e:
-                app.logger.error(f"ZK Verification Failed: {e.stderr}")
+                app.logger.error(f"ZK Verification Failed. RC={e.returncode}")
+                app.logger.error(f"STDOUT: {e.stdout}")
+                app.logger.error(f"STDERR: {e.stderr}")
                 return jsonify({'success': False, 'error': 'ZK Proof Verification Failed'}), 400
             except Exception as e:
                  app.logger.error(f"ZK Verification Error: {e}")

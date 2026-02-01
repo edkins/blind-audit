@@ -490,15 +490,16 @@ def submit_challenge():
                 # Use temp file for output to avoid pipe deadlocks
                 with tempfile.NamedTemporaryFile(mode='w+', delete=False) as out_f:
                     app.logger.info(f"Command inputs: {proof_cmd}")
-                    subprocess.run(
-                        proof_cmd,
-                        stdout=out_f,
-                        stderr=subprocess.STDOUT, # Merge stderr to avoid pipe deadlock
-                        stdin=subprocess.DEVNULL, # Detach stdin
-                        text=True,
-                        check=True,
-                        timeout=300
-                    )
+                    
+                    # Construct shell command
+                    cmd_str = f"node zk_bridge.js generate-proof {leaves_json_path} {doc_index} {wasm_path} {zkey_path} > {out_f.name} 2>&1"
+                    app.logger.info(f"Running shell command: {cmd_str}")
+                    
+                    exit_code = os.system(cmd_str)
+                    
+                    if exit_code != 0:
+                        raise Exception(f"Command failed with exit code {exit_code}")
+                        
                     out_f.seek(0)
                     zk_proof_output = out_f.read()
                 

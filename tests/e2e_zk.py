@@ -78,28 +78,28 @@ def main():
     
     # 3. Check for ZK Proof in Quote (Client side check)
     if 'zk_proof' in quote and quote['zk_proof']:
-        print("✅ ZK Proof present in quote")
+        print("[OK] ZK Proof present in quote")
     else:
         # PII detector should find unsafe docs
         if result['unsafe_count'] > 0:
-            print("❌ ZK Proof MISSING despite unsafe docs found!")
+            print("[ERROR] ZK Proof MISSING despite unsafe docs found!")
             exit(1)
         else:
-            print("⚠️ No unsafe docs found, so no ZK proof expected.")
+            print("[INFO] No unsafe docs found, so no ZK proof expected.")
 
     # 4. Check Judge Verdict
     judge_result = check_judge_result(challenge_id)
     if not judge_result:
-        print("❌ Judge result not published")
+        print("[ERROR] Judge result not published")
         exit(1)
         
     print(f"Judge Verdict: {judge_result.get('verdict')}")
     print(f"Attestation Valid: {judge_result.get('attestation_valid')}")
     
     if judge_result.get('attestation_valid') is True:
-        print("✅ Attestation Verified (Including ZK Proof)")
+        print("[OK] Attestation Verified (Including ZK Proof)")
     else:
-        print("❌ Attestation Verification Failed")
+        print("[ERROR] Attestation Verification Failed")
         print(f"Reason: {judge_result.get('reason')}")
         exit(1)
 

@@ -9,23 +9,6 @@ async function main() {
     const F = poseidon.F;
 
     if (command === 'compute-root') {
-        const inputDir = process.argv[3];
-        const files = fs.readdirSync(inputDir).sort();
-        const leaves = [];
-
-        for (const file of files) {
-            const content = fs.readFileSync(path.join(inputDir, file));
-            // Hash content: mimicking the circuit logic if possible
-            // For simplicity, let's assume content hash is calculated elsewhere or pass file names?
-            // Wait, the circuit usually takes a leaf. 
-            // In our python code, we hash the content with SHA256 then convert to Field Element?
-            // Or use Poseidon on chunks?
-            // Let's use SHA256 hex -> BigInt -> Poseidon(BigInt) as leaf for compatibility?
-            // Or simpler: The "file hash" from Python (SHA256) is passed as input.
-        }
-        // Actually, Python passes a list of hashes.
-
-        // Let's change design: input is a JSON file with pre-computed SHA256 hashes converted to strings.
         const headerFile = process.argv[3];
         const data = JSON.parse(fs.readFileSync(headerFile, 'utf8'));
         // data.leaves: array of hex strings (SHA256)
@@ -49,7 +32,9 @@ async function main() {
             currentLevel = nextLevel;
         }
 
-        console.log(currentLevel[0].toString());
+        const root = currentLevel[0].toString();
+        // Ensure write completes before exit
+        process.stdout.write(root + '\n');
 
     } else if (command === 'generate-proof') {
         const headerFile = process.argv[3];
@@ -97,4 +82,9 @@ async function main() {
     }
 }
 
-main().catch(console.error);
+main().then(() => {
+    process.exit(0);
+}).catch((e) => {
+    console.error(e);
+    process.exit(1);
+});
