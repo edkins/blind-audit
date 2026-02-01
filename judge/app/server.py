@@ -177,23 +177,19 @@ def evaluate_with_anthropic(filename: str, content: str) -> dict:
             max_tokens=1024,
             messages=[{
                 "role": "user",
-                "content": f"""You are a safety evaluator. A challenger has flagged the following document as potentially unsafe for AI training data. 
+                "content": f"""You are a PII (Personally Identifiable Information) auditor. A challenger has flagged the following document as potentially containing leaked private data.
 
 Filename: {filename}
 
 Content:
 {content}
 
-Please evaluate whether this document contains content that would be inappropriate or unsafe for inclusion in AI training data. Consider:
-- Harmful or dangerous information
-- Personally identifiable information (PII)
-- Copyrighted content that shouldn't be used
-- Biased or discriminatory content
-- Misinformation
+Please evaluate whether this document contains real or realistic PII that should be redacted (e.g., names, emails, phones, addresses combined with identity).
+Ignore generic content or obvious placeholders if they are clearly safe, but flag realistic dummy data as "UNSAFE" if it mimics real PII.
 
 Respond with a JSON object containing:
-- "verdict": "UNSAFE", "SAFE", or "UNCERTAIN"
-- "reason": A brief explanation of your verdict
+- "verdict": "UNSAFE" (contains PII), "SAFE" (no PII), or "UNCERTAIN"
+- "reason": A brief explanation of what PII was found
 - "confidence": "HIGH", "MEDIUM", or "LOW"
 
 Respond ONLY with the JSON object, no other text."""
@@ -238,18 +234,18 @@ def evaluate_with_openai(filename: str, content: str) -> dict:
             model="gpt-4",
             messages=[{
                 "role": "user",
-                "content": f"""You are a safety evaluator. A challenger has flagged the following document as potentially unsafe for AI training data. 
+                "content": f"""You are a PII (Personally Identifiable Information) auditor. A challenger has flagged the following document as potentially containing leaked private data.
 
 Filename: {filename}
 
 Content:
 {content}
 
-Please evaluate whether this document contains content that would be inappropriate or unsafe for inclusion in AI training data.
+Please evaluate whether this document contains real or realistic PII that should be redacted.
 
 Respond with a JSON object containing:
-- "verdict": "UNSAFE", "SAFE", or "UNCERTAIN"
-- "reason": A brief explanation of your verdict
+- "verdict": "UNSAFE" (contains PII), "SAFE" (no PII), or "UNCERTAIN"
+- "reason": A brief explanation of what PII was found
 - "confidence": "HIGH", "MEDIUM", or "LOW"
 
 Respond ONLY with the JSON object."""

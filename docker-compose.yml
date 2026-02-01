@@ -23,7 +23,7 @@ services:
       - "8080:8080"
     volumes:
       - pki-certs:/certs:ro
-      - ./data-provider/dataset:/data:ro
+      - ./data-provider/dataset:/data
       - challenges:/challenges
       - ./zk-circuit:/app/zk_artifacts:ro
     environment:

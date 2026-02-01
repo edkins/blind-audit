@@ -64,6 +64,32 @@ def initialize_dataset():
             with open(dataset_dir / "error_log.txt", "w") as f:
                 f.write(f"Failed to load dataset: {e}")
 
+def reset_dataset_logic(source='SYNTHETIC', entries=10):
+    """Reset the dataset directory with new data."""
+    dataset_dir = Path(DATASET_PATH)
+    
+    # Clear existing
+    for f in dataset_dir.glob('*'):
+        if f.is_file():
+            f.unlink()
+            
+    try:
+        import dataset
+        if source == 'HF':
+            data_items = dataset.parse_dataset(entries=entries)
+        else:
+            data_items = dataset.generate_synthetic_dataset(entries=entries)
+            
+        for i, item in enumerate(data_items):
+            filename = f"doc_{i:03d}.txt"  # Generic name
+            filepath = dataset_dir / filename
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(item['text'])
+        
+        return len(data_items), None
+    except Exception as e:
+        return 0, str(e)
+
 
 
 def load_signing_key():
@@ -342,6 +368,14 @@ INDEX_HTML = """
     
     <div id="result"></div>
     
+    <div style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px;">
+        <h3>⚙️ Dataset Settings</h3>
+        <p>Current Source: <span id="current-source">Unknown</span></p>
+        <button onclick="resetDataset('SYNTHETIC')" style="background:#6c757d; margin-right:10px;">Load Synthetic Data</button>
+        <button onclick="resetDataset('HF')" style="background:#17a2b8;">Load Hugging Face PII Data</button>
+        <div id="dataset-status" style="margin-top: 10px; font-style: italic;"></div>
+    </div>
+
     <h2>WASM Module Requirements</h2>
     <p>Your WebAssembly module should:</p>
     <ul>
@@ -366,6 +400,12 @@ INDEX_HTML = """
                     method: 'POST',
                     body: formData
                 });
+                
+                if (response.status === 429) {
+                     resultDiv.innerHTML = `<div class="result error"><h3>⚠️ Rate Limit Exceeded</h3><p>Please wait before submitting again.</p></div>`;
+                     return;
+                }
+
                 const data = await response.json();
                 
                 if (data.success) {
@@ -398,6 +438,34 @@ INDEX_HTML = """
                 `;
             }
         });
+
+        async function resetDataset(source) {
+            const statusDiv = document.getElementById('dataset-status');
+            statusDiv.innerText = `Loading ${source} dataset... please wait...`;
+            statusDiv.style.color = 'blue';
+            
+            try {
+                const res = await fetch('/api/reset_dataset', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({source: source})
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    statusDiv.innerText = `Success! Loaded ${data.count} documents.`;
+                    statusDiv.style.color = 'green';
+                    document.getElementById('current-source').innerText = source;
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    statusDiv.innerText = `Error: ${data.error}`;
+                    statusDiv.style.color = 'red';
+                }
+            } catch (e) {
+                statusDiv.innerText = `Error: ${e}`;
+                statusDiv.style.color = 'red';
+            }
+        }
     </script>
 </body>
 </html>
@@ -415,11 +483,49 @@ def index():
         doc_count=len(file_hashes)
     )
 
+# Simple rate limiter (in-memory)
+RATE_LIMIT_WINDOW = 60  # seconds
+RATE_LIMIT_MAX_REQUESTS = 10
+request_history = {} # IP -> [timestamp]
+
+def check_rate_limit(ip):
+    now = time.time()
+    # Clean up old timestamps
+    if ip in request_history:
+        request_history[ip] = [t for t in request_history[ip] if t > now - RATE_LIMIT_WINDOW]
+    else:
+        request_history[ip] = []
+        
+    if len(request_history[ip]) >= RATE_LIMIT_MAX_REQUESTS:
+        return False
+        
+    request_history[ip].append(now)
+    return True
+
+
+@app.route('/api/reset_dataset', methods=['POST'])
+def api_reset_dataset():
+    data = request.json
+    source = data.get('source', 'SYNTHETIC')
+    
+    app.logger.info(f"Resetting dataset to {source}")
+    count, error = reset_dataset_logic(source)
+    
+    if error:
+        return jsonify({'success': False, 'error': error}), 500
+        
+    return jsonify({'success': True, 'count': count})
+
 
 @app.route('/challenge', methods=['POST'])
 def submit_challenge():
     """Handle a challenge submission."""
     try:
+        # Rate Limit Check
+        if not check_rate_limit(request.remote_addr):
+            app.logger.warning(f"Rate limit exceeded for {request.remote_addr}")
+            return jsonify({'success': False, 'error': 'Rate limit exceeded'}), 429
+
         app.logger.warning("Received new challenge submission")
 
         # Get the WASM module

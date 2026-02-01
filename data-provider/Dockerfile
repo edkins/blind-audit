@@ -15,15 +15,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-RUN pip3 install flask cryptography pynacl requests datasets
+RUN pip3 install flask cryptography pynacl requests datasets pandas huggingface_hub
 
 # Install Node.js (for ZK proof generation)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
-
-# Install Python dependencies
-RUN pip3 install flask cryptography pynacl requests datasets
-
 
 
 # =============================================================================
