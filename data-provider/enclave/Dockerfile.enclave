@@ -2,7 +2,7 @@
 FROM ubuntu:24.04 AS runtime
 
 # Install build dependencies
-RUN apt-get update && apt-get install -y gcc g++ libssl-dev make cmake git libcbor-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y gcc libssl-dev libcbor-dev && rm -rf /var/lib/apt/lists/*
 
 # # Build libcbor from source (not in default yum repos)
 # RUN git clone --depth 1 --branch v0.10.2 https://github.com/PJK/libcbor.git /tmp/libcbor && \

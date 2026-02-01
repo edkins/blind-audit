@@ -23,14 +23,23 @@
 #define NSM_DEVICE_PATH "/dev/nsm"
 #define NSM_MAX_ATTESTATION_SIZE (16 * 1024)
 
-/* NSM ioctl command */
-#define NSM_IOCTL_REQUEST _IOWR('N', 0, struct nsm_message)
+/* NSM ioctl command - uses iovec-style structure */
+/* Magic is 0x0A, command 0, read/write */
+#define NSM_IOCTL_MAGIC 0x0A
+#define NSM_IO_REQUEST _IOWR(NSM_IOCTL_MAGIC, 0, struct nsm_message)
+
+/* 
+ * NSM message structure - matches the Rust IoSlice/IoSliceMut layout
+ * which is equivalent to struct iovec
+ */
+struct nsm_iovec {
+    void *iov_base;
+    size_t iov_len;
+};
 
 struct nsm_message {
-    void *request;
-    uint32_t request_len;
-    void *response;
-    uint32_t response_len;
+    struct nsm_iovec request;
+    struct nsm_iovec response;
 };
 
 /* Helper to read big-endian uint32 */
@@ -256,13 +265,17 @@ static int get_attestation_document(const uint8_t *user_data, size_t user_data_l
     
     /* Make ioctl request */
     struct nsm_message msg = {
-        .request = request_buf,
-        .request_len = (uint32_t)request_len,
-        .response = response_buf,
-        .response_len = NSM_MAX_ATTESTATION_SIZE,
+        .request = {
+            .iov_base = request_buf,
+            .iov_len = request_len,
+        },
+        .response = {
+            .iov_base = response_buf,
+            .iov_len = NSM_MAX_ATTESTATION_SIZE,
+        },
     };
     
-    int ret = ioctl(fd, NSM_IOCTL_REQUEST, &msg);
+    int ret = ioctl(fd, NSM_IO_REQUEST, &msg);
     close(fd);
     free(request_buf);
     
@@ -272,10 +285,10 @@ static int get_attestation_document(const uint8_t *user_data, size_t user_data_l
         return -1;
     }
     
-    fprintf(stderr, "NSM returned %u bytes\n", msg.response_len);
+    fprintf(stderr, "NSM returned %zu bytes\n", msg.response.iov_len);
     
     /* Parse CBOR response to extract attestation document */
-    ret = parse_attestation_response(response_buf, msg.response_len,
+    ret = parse_attestation_response(response_buf, msg.response.iov_len,
                                       attestation_out, attestation_len);
     
     free(response_buf);

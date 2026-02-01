@@ -19,7 +19,7 @@ run-enclave-debug: build-eif
 	nitro-cli run-enclave \
 		--eif-path $(ENCLAVE_EIF) \
 		--cpu-count 2 \
-		--memory 512 \
+		--memory 2000 \
 		--debug-mode
 	@echo ""
 	@echo "Enclave started. To view console output:"
