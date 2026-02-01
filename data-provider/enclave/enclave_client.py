@@ -184,6 +184,17 @@ class EnclaveClient:
         result = response_data[offset:offset+result_length]
         offset += result_length
         
+        # Flagged document info (added by server)
+        has_flagged = struct.unpack('>I', response_data[offset:offset+4])[0]
+        offset += 4
+        flagged_index = None
+        flagged_hash = None
+        if has_flagged:
+            flagged_index = struct.unpack('>I', response_data[offset:offset+4])[0]
+            offset += 4
+            flagged_hash = response_data[offset:offset+32]
+            offset += 32
+        
         # Attestation
         attestation_length = struct.unpack('>I', response_data[offset:offset+4])[0]
         offset += 4
