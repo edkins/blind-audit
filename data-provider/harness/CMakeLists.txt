@@ -42,13 +42,11 @@ endif()
 message(STATUS "WAMR_ROOT: ${WAMR_ROOT}")
 
 # WAMR build configuration
-set(WAMR_BUILD_PLATFORM "linux")
-set(WAMR_BUILD_TARGET "X86_64")
-set(WAMR_BUILD_INTERP 1)
-set(WAMR_BUILD_AOT 0)       # Interpreter only for simplicity
-set(WAMR_BUILD_JIT 0)
-set(WAMR_BUILD_LIBC_BUILTIN 1)
-set(WAMR_BUILD_LIBC_WASI 0)  # Disable WASI - we don't want challengers to have I/O
+# set(WAMR_BUILD_INTERP 1)
+# set(WAMR_BUILD_AOT 0)       # Interpreter only for simplicity
+# set(WAMR_BUILD_JIT 0)
+# set(WAMR_BUILD_LIBC_BUILTIN 1)
+# set(WAMR_BUILD_LIBC_WASI 0)  # Disable WASI - we don't want challengers to have I/O
 
 # Include WAMR core
 include(${WAMR_ROOT}/build-scripts/runtime_lib.cmake)

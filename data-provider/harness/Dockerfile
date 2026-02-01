@@ -44,15 +44,28 @@ RUN git clone --depth 1 --branch WAMR-2.1.0 \
 
 # Build WAMR library (interpreter mode only, minimal config)
 WORKDIR /opt/wamr/product-mini/platforms/linux
+# RUN mkdir -p build && cd build && \
+#     cmake .. \
+#         -DWAMR_BUILD_INTERP=1 \
+#         -DWAMR_BUILD_AOT=0 \
+#         -DWAMR_BUILD_JIT=0 \
+#         -DWAMR_BUILD_LIBC_BUILTIN=1 \
+#         -DWAMR_BUILD_LIBC_WASI=0 \
+#         -DWAMR_BUILD_FAST_INTERP=1 \
+#         -DWAMR_BUILD_MINI_LOADER=0 && \
+#     make -j$(nproc)
 RUN mkdir -p build && cd build && \
     cmake .. \
         -DWAMR_BUILD_INTERP=1 \
         -DWAMR_BUILD_AOT=0 \
         -DWAMR_BUILD_JIT=0 \
-        -DWAMR_BUILD_LIBC_BUILTIN=1 \
-        -DWAMR_BUILD_LIBC_WASI=0 \
-        -DWAMR_BUILD_FAST_INTERP=1 \
-        -DWAMR_BUILD_MINI_LOADER=0 && \
+        -DWAMR_BUILD_LIBC_WASI=1 \
+        -DWAMR_BUILD_BULK_MEMORY=1 \
+        -DWAMR_BUILD_REF_TYPES=0 \
+        -DWAMR_BUILD_SIMD=0 \
+        -DWAMR_BUILD_TARGET="X86_64" \
+        -DWAMR_BUILD_FAST_INTERP=0 \
+        -DWAMR_DISABLE_HW_BOUND_CHECK=1 && \
     make -j$(nproc)
 
 # Copy harness source
@@ -71,11 +84,12 @@ RUN gcc -O2 -Wall \
     -I/opt/wamr/core/shared/platform/linux \
     -DWASM_ENABLE_INTERP=1 \
     -DWASM_ENABLE_AOT=0 \
-    -DWASM_ENABLE_LIBC_BUILTIN=1 \
-    -DWASM_ENABLE_LIBC_WASI=0 \
-    -DWASM_ENABLE_FAST_INTERP=1 \
+    -DWASM_ENABLE_LIBC_BUILTIN=0 \
+    -DWASM_ENABLE_LIBC_WASI=1 \
+    -DWASM_ENABLE_FAST_INTERP=0 \
     -DBH_MALLOC=wasm_runtime_malloc \
     -DBH_FREE=wasm_runtime_free \
+    -march=x86-64 -mtune=generic \
     -c src/harness.c -o harness.o
 
 RUN gcc -O2 -Wall \
@@ -86,24 +100,27 @@ RUN gcc -O2 -Wall \
     -I/opt/wamr/core/shared/platform/linux \
     -DWASM_ENABLE_INTERP=1 \
     -DWASM_ENABLE_AOT=0 \
-    -DWASM_ENABLE_LIBC_BUILTIN=1 \
-    -DWASM_ENABLE_LIBC_WASI=0 \
-    -DWASM_ENABLE_FAST_INTERP=1 \
+    -DWASM_ENABLE_LIBC_BUILTIN=0 \
+    -DWASM_ENABLE_LIBC_WASI=1 \
+    -DWASM_ENABLE_FAST_INTERP=0 \
     -DBH_MALLOC=wasm_runtime_malloc \
     -DBH_FREE=wasm_runtime_free \
+    -march=x86-64 -mtune=generic \
     -c src/wasm_runtime.c -o wasm_runtime.o
 
 RUN gcc -O2 -Wall \
     -I./include \
+    -march=x86-64 -mtune=generic \
     -c src/crypto_sim.c -o crypto_sim.o
 
 RUN gcc -O2 -Wall \
     -I./include \
-    -c src/enclave_server.c -o enclave_server.o
+    -march=x86-64 -mtune=generic \
+    -c src/test_server.c -o test_server.o
 
 # Link everything
 RUN gcc -o harness-cli \
-    harness.o wasm_runtime.o crypto_sim.o enclave_server.o \
+    harness.o wasm_runtime.o crypto_sim.o test_server.o \
     /opt/wamr/product-mini/platforms/linux/build/libvmlib.a \
     -lssl -lcrypto -lpthread -lm -ldl -lcbor
 
