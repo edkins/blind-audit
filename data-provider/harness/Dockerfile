@@ -13,7 +13,7 @@
 #              -v $(pwd)/challengers:/data/challengers \
 #              tee-harness --wasm /data/challengers/pii.wasm --dataset /data/dataset
 
-FROM ubuntu:22.04 AS builder
+FROM ubuntu:24.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -60,12 +60,14 @@ RUN mkdir -p build && cd build && \
         -DWAMR_BUILD_AOT=0 \
         -DWAMR_BUILD_JIT=0 \
         -DWAMR_BUILD_LIBC_WASI=1 \
+        -DWAMR_BUILD_LIBC_BUILTIN=1 \
         -DWAMR_BUILD_BULK_MEMORY=1 \
         -DWAMR_BUILD_REF_TYPES=0 \
         -DWAMR_BUILD_SIMD=0 \
         -DWAMR_BUILD_TARGET="X86_64" \
         -DWAMR_BUILD_FAST_INTERP=0 \
-        -DWAMR_DISABLE_HW_BOUND_CHECK=1 && \
+        -DWAMR_DISABLE_HW_BOUND_CHECK=1 \
+        -DWAMR_DISABLE_WRITE_GS_BASE=1 && \
     make -j$(nproc)
 
 # Copy harness source
@@ -84,12 +86,13 @@ RUN gcc -O2 -Wall \
     -I/opt/wamr/core/shared/platform/linux \
     -DWASM_ENABLE_INTERP=1 \
     -DWASM_ENABLE_AOT=0 \
-    -DWASM_ENABLE_LIBC_BUILTIN=0 \
+    -DWASM_ENABLE_JIT=0 \
+    -DWASM_ENABLE_LIBC_BUILTIN=1 \
     -DWASM_ENABLE_LIBC_WASI=1 \
     -DWASM_ENABLE_FAST_INTERP=0 \
     -DBH_MALLOC=wasm_runtime_malloc \
     -DBH_FREE=wasm_runtime_free \
-    -march=x86-64 -mtune=generic \
+    -march=x86-64 -mtune=generic -mno-sse3 -mno-ssse3 -mno-sse4.1 -mno-sse4.2 -mno-avx -mno-avx2 -mno-fma -mno-bmi -mno-bmi2 \
     -c src/harness.c -o harness.o
 
 RUN gcc -O2 -Wall \
@@ -98,29 +101,30 @@ RUN gcc -O2 -Wall \
     -I/opt/wamr/core/shared/platform/include \
     -I/opt/wamr/core/shared/utils \
     -I/opt/wamr/core/shared/platform/linux \
-    -DWASM_ENABLE_INTERP=1 \
+    -DWASM_ENABLE_INTERP=0 \
     -DWASM_ENABLE_AOT=0 \
-    -DWASM_ENABLE_LIBC_BUILTIN=0 \
+    -DWASM_ENABLE_JIT=0 \
+    -DWASM_ENABLE_LIBC_BUILTIN=1 \
     -DWASM_ENABLE_LIBC_WASI=1 \
     -DWASM_ENABLE_FAST_INTERP=0 \
     -DBH_MALLOC=wasm_runtime_malloc \
     -DBH_FREE=wasm_runtime_free \
-    -march=x86-64 -mtune=generic \
+    -march=x86-64 -mtune=generic -mno-sse3 -mno-ssse3 -mno-sse4.1 -mno-sse4.2 -mno-avx -mno-avx2 -mno-fma -mno-bmi -mno-bmi2 \
     -c src/wasm_runtime.c -o wasm_runtime.o
 
 RUN gcc -O2 -Wall \
     -I./include \
-    -march=x86-64 -mtune=generic \
+    -march=x86-64 -mtune=generic -mno-sse3 -mno-ssse3 -mno-sse4.1 -mno-sse4.2 -mno-avx -mno-avx2 -mno-fma -mno-bmi -mno-bmi2 \
     -c src/crypto_sim.c -o crypto_sim.o
 
 RUN gcc -O2 -Wall \
     -I./include \
-    -march=x86-64 -mtune=generic \
-    -c src/test_server.c -o test_server.o
+    -march=x86-64 -mtune=generic -mno-sse3 -mno-ssse3 -mno-sse4.1 -mno-sse4.2 -mno-avx -mno-avx2 -mno-fma -mno-bmi -mno-bmi2 \
+    -c src/enclave_server.c -o enclave_server.o
 
 # Link everything
 RUN gcc -o harness-cli \
-    harness.o wasm_runtime.o crypto_sim.o test_server.o \
+    harness.o wasm_runtime.o crypto_sim.o enclave_server.o \
     /opt/wamr/product-mini/platforms/linux/build/libvmlib.a \
     -lssl -lcrypto -lpthread -lm -ldl -lcbor
 
@@ -136,12 +140,12 @@ RUN /opt/wasi-sdk/bin/clang \
 # ============================================================================
 # Runtime image
 # ============================================================================
-FROM ubuntu:22.04 AS runtime
+FROM ubuntu:24.04 AS runtime
 
 RUN apt-get update && apt-get install -y \
     libssl3 \
     ca-certificates \
-    libcbor0.8  \
+    libcbor-dev  \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy artifacts from builder

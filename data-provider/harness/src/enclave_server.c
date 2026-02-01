@@ -507,7 +507,20 @@ int main(int argc, char *argv[]) {
     }
     
     fprintf(stderr, "Enclave server starting...\n");
-    
+
+    /* Print cpuinfo */
+    FILE *f = fopen("/proc/cpuinfo", "r");
+    if (f) {
+        char buf[4096];
+        while (fgets(buf, sizeof(buf), f)) {
+            if (strstr(buf, "flags")) {
+                fprintf(stderr, "CPU flags: %s\n", buf);
+                break;
+            }
+        }
+        fclose(f);
+    }
+
     /* Initialize WASM runtime */
     if (wasm_runtime_setup() != 0) {
         fprintf(stderr, "Failed to initialize WASM runtime\n");
