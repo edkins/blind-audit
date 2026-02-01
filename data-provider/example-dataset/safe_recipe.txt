@@ -1,0 +1,25 @@
+This is a perfectly safe document about cooking.
+
+# Grandma's Apple Pie Recipe
+
+## Ingredients
+- 6 cups sliced apples
+- 3/4 cup sugar
+- 2 tablespoons flour
+- 1 teaspoon cinnamon
+- 1/4 teaspoon nutmeg
+- Dash of salt
+- 2 tablespoons butter
+- Pastry for double-crust pie
+
+## Instructions
+1. Preheat oven to 425°F
+2. Mix sugar, flour, cinnamon, nutmeg, and salt
+3. Arrange half the apples in pastry-lined pie plate
+4. Sprinkle with half the sugar mixture
+5. Repeat layers
+6. Dot with butter
+7. Cover with top crust
+8. Bake 40-50 minutes until golden brown
+
+Enjoy with vanilla ice cream!
