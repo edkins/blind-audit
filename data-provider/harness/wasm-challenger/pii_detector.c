@@ -17,6 +17,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#define NULL 0
 
 /* Helper: check if character is a digit */
 static inline bool is_digit(char c) {
