@@ -1,0 +1,24 @@
+# Dockerfile for Nitro Enclave server
+FROM amazonlinux:2
+
+# Install build dependencies
+RUN yum install -y gcc openssl-devel make cmake3 git
+
+# Build libcbor from source (not in default yum repos)
+RUN git clone --depth 1 --branch v0.10.2 https://github.com/PJK/libcbor.git /tmp/libcbor && \
+    cd /tmp/libcbor && \
+    cmake3 -DCMAKE_BUILD_TYPE=Release -DCBOR_PRETTY_PRINTER=OFF . && \
+    make && \
+    make install && \
+    ldconfig && \
+    rm -rf /tmp/libcbor
+
+# Copy source
+COPY enclave_server.c /app/enclave_server.c
+
+# Compile
+WORKDIR /app
+RUN gcc -o enclave_server enclave_server.c -lcrypto -lcbor -Wall -O2
+
+# The enclave server will be PID 1
+CMD ["/app/enclave_server"]
