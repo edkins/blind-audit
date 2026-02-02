@@ -83,17 +83,29 @@ jobs:
         run: |
           echo "Deploying $IMAGE_TAG to instance $INSTANCE_ID"
           
+          # Build the commands array: set env vars, then run each line of the script
+          COMMANDS=$(cat <<'SCRIPT' | jq -R -s -c '
+            split("\n") | map(select(length > 0))
+          '
+          export IMAGE_TAG="$IMAGE_TAG"
+          export DEBUG_MODE="$DEBUG_MODE"
+          export ENCLAVE_REPO="$ENCLAVE_REPO"
+          export WEBSERVER_REPO="$WEBSERVER_REPO"
+          export AWS_REGION="${{ env.AWS_REGION }}"
+          SCRIPT
+          )
+          
+          # Append the actual deploy script
+          DEPLOY_SCRIPT=$(cat infra/deploy.sh | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          
+          # Merge the two arrays
+          ALL_COMMANDS=$(echo "[$COMMANDS, $DEPLOY_SCRIPT]" | jq -c 'flatten')
+          
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
+            --parameters "{\"commands\": $ALL_COMMANDS}" \
             --timeout-seconds 600 \
-            --parameters "commands=[
-              'export IMAGE_TAG=$IMAGE_TAG',
-              'export DEBUG_MODE=$DEBUG_MODE',
-              'export ENCLAVE_REPO=$ENCLAVE_REPO',
-              'export WEBSERVER_REPO=$WEBSERVER_REPO',
-              '/home/ec2-user/deploy.sh'
-            ]" \
             --query 'Command.CommandId' --output text)
 
           echo "Command ID: $COMMAND_ID"
