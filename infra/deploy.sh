@@ -4,9 +4,20 @@ set -ex
 # Parameters (passed as environment variables)
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 DEBUG_MODE="${DEBUG_MODE:-false}"
-ENCLAVE_REPO="${PROJECT_NAME:-blind-audit}-enclave"
-WEBSERVER_REPO="${PROJECT_NAME:-blind-audit}-webserver"
+ENCLAVE_REPO="${ENCLAVE_REPO:-blind-audit-enclave}"
+WEBSERVER_REPO="${WEBSERVER_REPO:-blind-audit-webserver}"
 AWS_REGION="${AWS_REGION:-us-east-2}"
+
+# If running as root (via SSM), re-run as ec2-user
+if [ "$(id -u)" = "0" ]; then
+  exec sudo -u ec2-user -i \
+    IMAGE_TAG="$IMAGE_TAG" \
+    DEBUG_MODE="$DEBUG_MODE" \
+    ENCLAVE_REPO="$ENCLAVE_REPO" \
+    WEBSERVER_REPO="$WEBSERVER_REPO" \
+    AWS_REGION="$AWS_REGION" \
+    bash -e "$0"
+fi
 
 # Get AWS account ID dynamically
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
