@@ -4,8 +4,8 @@ set -ex
 # Parameters (passed as environment variables)
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 DEBUG_MODE="${DEBUG_MODE:-false}"
-ENCLAVE_REPO="${PROJECT_NAME}-enclave"
-WEBSERVER_REPO="${PROJECT_NAME}-webserver"
+ENCLAVE_REPO="${PROJECT_NAME:-blind-audit}-enclave"
+WEBSERVER_REPO="${PROJECT_NAME:-blind-audit}-webserver"
 AWS_REGION="${AWS_REGION:-us-east-2}"
 
 # Get AWS account ID dynamically
