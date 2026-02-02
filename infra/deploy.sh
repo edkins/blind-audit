@@ -10,7 +10,7 @@ AWS_REGION="${AWS_REGION:-us-east-2}"
 
 # If running as root (via SSM), re-run as ec2-user
 if [ "$(id -u)" = "0" ]; then
-  chmod +x "$0"
+  chmod +rx "$0"
   exec sudo -u ec2-user -i \
     IMAGE_TAG="$IMAGE_TAG" \
     DEBUG_MODE="$DEBUG_MODE" \
