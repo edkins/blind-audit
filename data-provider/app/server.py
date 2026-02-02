@@ -29,6 +29,7 @@ from cryptography import x509
 from enclave_client import EnclaveClient, EnclaveResponse
 
 app = Flask(__name__)
+global_cid = None  # Will be set from command line args
 
 
 # Configuration from environment
@@ -149,6 +150,7 @@ def compute_wasm_hash(wasm_bytes: bytes) -> str:
 
 
 def run_wasm_challenge(wasm_bytes: bytes, dataset_path: Path, file_hashes: dict) -> EnclaveResponse:
+    global global_cid
     """
     Run the challenger's WebAssembly module against the dataset.
     
@@ -169,7 +171,9 @@ def run_wasm_challenge(wasm_bytes: bytes, dataset_path: Path, file_hashes: dict)
                 with open(filepath, 'rb') as f:
                     documents.append(f.read())
 
-        cid = get_cid()
+        cid = global_cid
+        if cid is None:
+            raise Exception("Enclave CID not set. Cannot run challenge.")
         app.logger.info(f"Using Enclave CID: {cid}")
         with EnclaveClient(cid) as client:
             return client.process(wasm_bytes, documents)
@@ -570,6 +574,7 @@ if __name__ == '__main__':
     parser.add_argument('--cid', type=int, help='Enclave CID')
     parser.add_argument('--port', type=int, default=8000, help='Port to run the server on')
     args = parser.parse_args()
+    global_cid = args.cid
 
     # Initialize dataset if needed
     initialize_dataset()
