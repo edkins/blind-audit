@@ -67,6 +67,9 @@ jobs:
       contents: read
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -83,7 +86,6 @@ jobs:
         run: |
           set -e
           echo "Deploying $IMAGE_TAG to instance"
-          ls
           
           # Build the commands array: set env vars, then run each line of the script
           COMMANDS=$(cat <<'SCRIPT' | jq -R -s -c '
