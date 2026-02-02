@@ -78,6 +78,7 @@ docker run -d \
   --name webserver \
   --restart unless-stopped \
   --network host \
+  --privileged \
   webserver:latest python3 server.py --cid "$ENCLAVE_CID" --port 8000
 
 echo "=========================================="

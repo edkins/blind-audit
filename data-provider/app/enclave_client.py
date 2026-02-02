@@ -10,7 +10,6 @@ import socket
 import struct
 import hashlib
 from dataclasses import dataclass
-import subprocess
 from typing import List, Optional
 import json
 import base64
