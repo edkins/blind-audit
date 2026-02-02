@@ -6,6 +6,8 @@ IMAGE_TAG="${IMAGE_TAG:-latest}"
 DEBUG_MODE="${DEBUG_MODE:-false}"
 ENCLAVE_REPO="${ENCLAVE_REPO:-blind-audit-enclave}"
 WEBSERVER_REPO="${WEBSERVER_REPO:-blind-audit-webserver}"
+JUDGE_REPO="${JUDGE_REPO:-blind-audit-judge}"
+CHALLENGER_REPO="${CHALLENGER_REPO:-blind-audit-challenger}"
 AWS_REGION="${AWS_REGION:-us-east-2}"
 
 # If running as root (via SSM), re-run as ec2-user
@@ -13,12 +15,15 @@ if [ "$(id -u)" = "0" ]; then
   # Copy script to a location ec2-user can access
   cp "$0" /tmp/deploy-run.sh
   chmod +rx /tmp/deploy-run.sh
+  chown ec2-user /tmp/docker-compose.yml
   
   exec sudo -u ec2-user -i \
     IMAGE_TAG="$IMAGE_TAG" \
     DEBUG_MODE="$DEBUG_MODE" \
     ENCLAVE_REPO="$ENCLAVE_REPO" \
     WEBSERVER_REPO="$WEBSERVER_REPO" \
+    JUDGE_REPO="$JUDGE_REPO" \
+    CHALLENGER_REPO="$CHALLENGER_REPO" \
     AWS_REGION="$AWS_REGION" \
     bash -e /tmp/deploy-run.sh
 fi
