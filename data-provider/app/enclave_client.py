@@ -29,6 +29,7 @@ class EnclaveResponse:
     wasm_hash: bytes
     documents_hash: bytes
     result: bytes
+    flagged_hash: Optional[bytes] 
     attestation_document: bytes
     
     @property
@@ -205,6 +206,7 @@ class EnclaveClient:
             wasm_hash=wasm_hash,
             documents_hash=documents_hash,
             result=result,
+            flagged_hash=flagged_hash,
             attestation_document=attestation,
         )
 

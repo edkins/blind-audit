@@ -1,6 +1,7 @@
 # ECR Repository for the enclave image
 resource "aws_ecr_repository" "enclave" {
   name                 = "${var.project_name}-enclave"
+  force_delete = true
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -15,6 +16,7 @@ resource "aws_ecr_repository" "enclave" {
 # ECR Repository for the webserver image
 resource "aws_ecr_repository" "webserver" {
   name                 = "${var.project_name}-webserver"
+  force_delete = true
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -29,6 +31,7 @@ resource "aws_ecr_repository" "webserver" {
 # ECR Repository for the judge image
 resource "aws_ecr_repository" "judge" {
   name                 = "${var.project_name}-judge"
+  force_delete = true
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -43,6 +46,7 @@ resource "aws_ecr_repository" "judge" {
 # ECR Repository for the challenger image
 resource "aws_ecr_repository" "challenger" {
   name                 = "${var.project_name}-challenger"
+  force_delete = true
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {

@@ -38,7 +38,8 @@
         "ec2:DescribePrefixLists",
         "ec2:DescribeVpcAttribute",
         "ec2:ModifySubnetAttribute",
-        "ec2:DescribeAddressesAttribute"
+        "ec2:DescribeAddressesAttribute",
+        "ec2:DisassociateAddress"
       ],
       "Resource": "*"
     },

@@ -55,7 +55,7 @@ services:
       - "8082:80"
     volumes:
       - results:/usr/share/nginx/html:ro
-      - ./results/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /tmp/results/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - judge
     networks:
@@ -70,7 +70,7 @@ services:
       - "8081:80"
     volumes:
       - ./challenger/challenges:/challenges
-      - ./compiled-wasm:/wasm:ro
+      - compiled-wasm:/wasm:ro
     depends_on:
       - judge
     networks:
@@ -78,6 +78,8 @@ services:
 
 volumes:
   results:
+    driver: local
+  compiled-wasm:
     driver: local
 
 networks:

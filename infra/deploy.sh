@@ -86,6 +86,31 @@ ENCLAVE_CID=$(nitro-cli describe-enclaves | jq -r '.[0].EnclaveCID')
 echo "Enclave CID: $ENCLAVE_CID"
 export ENCLAVE_CID
 
+cat <<'EOF' >/tmp/results/nginx.conf
+server {
+    listen 80;
+    server_name localhost;
+    
+    root /usr/share/nginx/html;
+    index index.html;
+    
+    # Serve static files
+    location / {
+        try_files $uri $uri/ /index.html;
+        
+        # Enable auto-index for JSON files
+        autoindex on;
+        autoindex_format json;
+    }
+    
+    # CORS headers for API access
+    location ~ \.json$ {
+        add_header Access-Control-Allow-Origin *;
+        add_header Content-Type application/json;
+    }
+}
+EOF
+
 # Start docker services
 docker compose -f /tmp/docker-compose.yml up -d
 
