@@ -58,6 +58,6 @@ RUN npm init -y && npm install snarkjs circomlibjs && ls -la /app/node_modules
 # Create directories
 RUN mkdir -p /data /challenges /results
 
-EXPOSE 8000
+EXPOSE 8080
 
 CMD ["python3", "server.py"]

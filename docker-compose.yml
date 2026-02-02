@@ -1,54 +1,37 @@
-version: '3.8'
-
 services:
-  # =============================================================================
-  # PKI Setup (runs once at startup to generate certificates)
-  # =============================================================================
-  pki-init:
-    build:
-      context: ./pki
-      dockerfile: Dockerfile
-    volumes:
-      - pki-certs:/certs
-    command: /setup-pki.sh
-
   # =============================================================================
   # Data Provider - runs the TEE (simulated), hosts dataset, accepts challenges
   # =============================================================================
   data-provider:
-    build:
-      context: ./data-provider
-      dockerfile: Dockerfile
+    # build:
+    #   context: ./data-provider
+    #   dockerfile: Dockerfile
+    image: webserver:latest
     ports:
       - "8080:8080"
     volumes:
-      - pki-certs:/certs:ro
       - ./data-provider/dataset:/data
-      - challenges:/challenges
       - ./zk-circuit:/app/zk_artifacts:ro
     environment:
-      - TEE_SIGNING_KEY=/certs/tee-signing.key
-      - TEE_CERT_CHAIN=/certs/tee-chain.pem
       - DATASET_PATH=/data
       - JUDGE_URL=http://judge:8081/submit
-    depends_on:
-      pki-init:
-        condition: service_completed_successfully
     networks:
-      - internal
-      - frontend
+      - host
+    privileged: true  # Required for access to AF_VSOCK
+    command:
+      python3 server.py --cid "${ENCLAVE_CID}" --port 8080
 
   # =============================================================================
   # Judge - verifies attestations, evaluates flagged documents with LLM
   # =============================================================================
   judge:
-    build:
-      context: ./judge
-      dockerfile: Dockerfile
+    # build:
+    #   context: ./judge
+    #   dockerfile: Dockerfile
+    image: judge:latest
     ports:
-      - "8081:8081"
+      - "8083:8083"
     volumes:
-      - pki-certs:/certs:ro
       - results:/results
       - ./zk-circuit/verification_key.json:/app/zk_artifacts/verification_key.json:ro
     environment:
@@ -58,9 +41,6 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GEMMA_API_KEY=${GEMMA_API_KEY:-}
-    depends_on:
-      pki-init:
-        condition: service_completed_successfully
     networks:
       - internal
 
@@ -84,7 +64,7 @@ services:
       context: ./challenger/web
       dockerfile: Dockerfile
     ports:
-      - "8083:80"
+      - "8081:80"
     volumes:
       - ./challenger/challenges:/challenges
       - ./compiled-wasm:/wasm:ro
@@ -93,25 +73,7 @@ services:
     networks:
       - frontend
 
-  # =============================================================================
-  # Challenger WASM Compiler - compiles Rust challenges to WebAssembly
-  # =============================================================================
-  challenger-compiler:
-    build:
-      context: ./challenger
-      dockerfile: Dockerfile
-    volumes:
-      - ./challenger/challenges:/challenges:ro
-      - ./compiled-wasm:/output
-    environment:
-      - WATCH=true  # Set to true to keep watching for changes
-
-
 volumes:
-  pki-certs:
-    driver: local
-  challenges:
-    driver: local
   results:
     driver: local
 

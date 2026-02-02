@@ -47,8 +47,8 @@ resource "aws_security_group" "ec2" {
   # Allow traffic from ALB only
   ingress {
     description     = "HTTP from ALB"
-    from_port       = 8000
-    to_port         = 8000
+    from_port       = 8080
+    to_port         = 8082
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
   }

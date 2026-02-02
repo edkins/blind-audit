@@ -51,6 +51,10 @@ echo "Stopping existing webserver..."
 docker stop webserver 2>/dev/null || true
 docker rm webserver 2>/dev/null || true
 
+# Stop existing services
+echo "Stopping existing docker services..."
+docker compose down
+
 # Terminate existing enclave
 echo "Terminating existing enclave..."
 nitro-cli terminate-enclave --all || true
@@ -72,14 +76,8 @@ nitro-cli run-enclave $ENCLAVE_ARGS
 ENCLAVE_CID=$(nitro-cli describe-enclaves | jq -r '.[0].EnclaveCID')
 echo "Enclave CID: $ENCLAVE_CID"
 
-# Start webserver
-echo "Starting webserver..."
-docker run -d \
-  --name webserver \
-  --restart unless-stopped \
-  --network host \
-  --privileged \
-  webserver:latest python3 server.py --cid "$ENCLAVE_CID" --port 8000
+# Start docker services
+docker compose up -d
 
 echo "=========================================="
 echo "Deploy complete!"

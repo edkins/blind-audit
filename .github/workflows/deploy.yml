@@ -63,6 +63,26 @@ jobs:
           docker tag $ECR_REGISTRY/$WEBSERVER_REPO:${{ github.sha }} $ECR_REGISTRY/$WEBSERVER_REPO:latest
           docker push $ECR_REGISTRY/$WEBSERVER_REPO:latest
 
+      - name: Build and push judge image
+        env:
+          ECR_REGISTRY: ${{ steps.get-account.outputs.registry }}
+          JUDGE_REPO: ${{ vars.PROJECT_NAME }}-judge
+        run: |
+          docker build -t $ECR_REGISTRY/$JUDGE_REPO:${{ github.sha }} -f judge/Dockerfile judge
+          docker push $ECR_REGISTRY/$JUDGE_REPO:${{ github.sha }}
+          docker tag $ECR_REGISTRY/$JUDGE_REPO:${{ github.sha }} $ECR_REGISTRY/$JUDGE_REPO:latest
+          docker push $ECR_REGISTRY/$JUDGE_REPO:latest
+
+      - name: Build and push challenger image
+        env:
+          ECR_REGISTRY: ${{ steps.get-account.outputs.registry }}
+          CHALLENGER_REPO: ${{ vars.PROJECT_NAME }}-challenger
+        run: |
+          docker build -t $ECR_REGISTRY/$CHALLENGER_REPO:${{ github.sha }} -f challenger/web/Dockerfile challenger/web
+          docker push $ECR_REGISTRY/$CHALLENGER_REPO:${{ github.sha }}
+          docker tag $ECR_REGISTRY/$CHALLENGER_REPO:${{ github.sha }} $ECR_REGISTRY/$CHALLENGER_REPO:latest
+          docker push $ECR_REGISTRY/$CHALLENGER_REPO:latest
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -87,6 +107,8 @@ jobs:
           DEBUG_MODE: ${{ inputs.debug_mode || 'false' }}
           ENCLAVE_REPO: ${{ vars.PROJECT_NAME }}-enclave
           WEBSERVER_REPO: ${{ vars.PROJECT_NAME }}-webserver
+          JUDGE_REPO: ${{ vars.PROJECT_NAME }}-judge
+          CHALLENGER_REPO: ${{ vars.PROJECT_NAME }}-challenger
         run: |
           set -e
           echo "Deploying $IMAGE_TAG to instance"
@@ -99,15 +121,18 @@ jobs:
           export DEBUG_MODE="$DEBUG_MODE"
           export ENCLAVE_REPO="$ENCLAVE_REPO"
           export WEBSERVER_REPO="$WEBSERVER_REPO"
+          export JUDGE_REPO="$JUDGE_REPO"
+          export CHALLENGER_REPO="$CHALLENGER_REPO"
           export AWS_REGION="${{ env.AWS_REGION }}"
           SCRIPT
           )
           
           # Append the actual deploy script
           DEPLOY_SCRIPT=$(cat infra/deploy.sh | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          DOCKER_COMPOSE=$(cat docker-compose.yml | jq -R -s -c 'split("\n") | map(select(length > 0))')
           
           # Merge the two arrays
-          ALL_COMMANDS=$(echo "[$COMMANDS, $DEPLOY_SCRIPT]" | jq -c 'flatten')
+          ALL_COMMANDS=$(echo "[$COMMANDS, $DOCKER_COMPOSE, $DEPLOY_SCRIPT]" | jq -c 'flatten')
           
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
