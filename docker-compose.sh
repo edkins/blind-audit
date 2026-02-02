@@ -62,9 +62,10 @@ services:
       - frontend
 
   challenger-ui:
-    build:
-      context: ./challenger/web
-      dockerfile: Dockerfile
+    # build:
+    #   context: ./challenger/web
+    #   dockerfile: Dockerfile
+    image: challenger:latest
     ports:
       - "8081:80"
     volumes:
