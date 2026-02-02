@@ -140,8 +140,7 @@ Go to your repository → Settings → Secrets and variables → Actions
 |------|-------|
 | `AWS_REGION` | `us-east-2` (or your region) |
 | `INSTANCE_ID` | The instance ID from main output |
-| `ENCLAVE_REPO` | `tee-hackathon-enclave` |
-| `WEBSERVER_REPO` | `tee-hackathon-webserver` |
+| `PROJECT_NAME` | `blind-audit` (or what was configured in terraform.tfvars) |
 
 ### 4. Create a Cognito user
 

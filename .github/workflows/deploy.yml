@@ -46,17 +46,17 @@ jobs:
       - name: Build and push enclave image
         env:
           ECR_REGISTRY: ${{ steps.get-account.outputs.registry }}
-          ENCLAVE_REPO: ${{ vars.ENCLAVE_REPO }}
+          ENCLAVE_REPO: ${{ vars.PROJECT_NAME }}-enclave
         run: |
-          docker build -t $ECR_REGISTRY/$ENCLAVE_REPO:${{ github.sha }} -f Dockerfile.enclave .
+          docker build -t $ECR_REGISTRY/$ENCLAVE_REPO:${{ github.sha }} -f infra2/Dockerfile.enclave .
           docker push $ECR_REGISTRY/$ENCLAVE_REPO:${{ github.sha }}
 
       - name: Build and push webserver image
         env:
           ECR_REGISTRY: ${{ steps.get-account.outputs.registry }}
-          WEBSERVER_REPO: ${{ vars.WEBSERVER_REPO }}
+          WEBSERVER_REPO: ${{ vars.PROJECT_NAME }}-webserver
         run: |
-          docker build -t $ECR_REGISTRY/$WEBSERVER_REPO:${{ github.sha }} -f Dockerfile.webserver .
+          docker build -t $ECR_REGISTRY/$WEBSERVER_REPO:${{ github.sha }} -f infra2/Dockerfile.webserver .
           docker push $ECR_REGISTRY/$WEBSERVER_REPO:${{ github.sha }}
 
   deploy:
@@ -78,8 +78,8 @@ jobs:
           INSTANCE_ID: ${{ vars.INSTANCE_ID }}
           IMAGE_TAG: ${{ github.sha }}
           DEBUG_MODE: ${{ inputs.debug_mode || 'false' }}
-          ENCLAVE_REPO: ${{ vars.ENCLAVE_REPO }}
-          WEBSERVER_REPO: ${{ vars.WEBSERVER_REPO }}
+          ENCLAVE_REPO: ${{ vars.PROJECT_NAME }}-enclave
+          WEBSERVER_REPO: ${{ vars.PROJECT_NAME }}-webserver
         run: |
           echo "Deploying $IMAGE_TAG to instance $INSTANCE_ID"
           
