@@ -1,4 +1,4 @@
-echo <<'EOF' > /tmp/docker-compose.yml
+cat <<'EOF' >/tmp/docker-compose.yml
 services:
   # =============================================================================
   # Data Provider - runs the TEE (simulated), hosts dataset, accepts challenges
