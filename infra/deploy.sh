@@ -57,7 +57,7 @@ docker rm webserver 2>/dev/null || true
 
 # Stop existing services
 echo "Stopping existing docker services..."
-docker compose down
+docker compose down -f /tmp/docker-compose.yml || true
 
 # Terminate existing enclave
 echo "Terminating existing enclave..."
@@ -79,6 +79,7 @@ nitro-cli run-enclave $ENCLAVE_ARGS
 # Get enclave CID for webserver
 ENCLAVE_CID=$(nitro-cli describe-enclaves | jq -r '.[0].EnclaveCID')
 echo "Enclave CID: $ENCLAVE_CID"
+export ENCLAVE_CID
 
 # Start docker services
 docker compose up -d -f /tmp/docker-compose.yml

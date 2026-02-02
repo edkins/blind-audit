@@ -14,6 +14,11 @@ dnf install -y docker jq
 systemctl enable docker
 systemctl start docker
 
+# Install docker compose plugin
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m) -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
 # Install Nitro Enclaves CLI
 dnf install -y aws-nitro-enclaves-cli aws-nitro-enclaves-cli-devel
 
