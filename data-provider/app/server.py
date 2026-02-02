@@ -9,6 +9,7 @@ This server:
 4. Sends attestation packages to the Judge
 """
 
+import argparse
 import os
 import json
 import hashlib
@@ -565,6 +566,11 @@ def health():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Data Provider Server')
+    parser.add_argument('--cid', type=int, help='Enclave CID')
+    parser.add_argument('--port', type=int, default=8000, help='Port to run the server on')
+    args = parser.parse_args()
+
     # Initialize dataset if needed
     initialize_dataset()
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(host='0.0.0.0', port=args.port, debug=True)

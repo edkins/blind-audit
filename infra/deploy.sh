@@ -78,8 +78,7 @@ docker run -d \
   --name webserver \
   --restart unless-stopped \
   --network host \
-  -e ENCLAVE_CID="$ENCLAVE_CID" \
-  webserver:latest
+  webserver:latest --cid "$ENCLAVE_CID" --port 8000
 
 echo "=========================================="
 echo "Deploy complete!"

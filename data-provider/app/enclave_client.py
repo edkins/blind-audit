@@ -242,21 +242,21 @@ def verify_attestation(attestation_document: bytes, expected_pcrs: dict = None) 
     return True
 
 
-def get_cid() -> int:
-    """
-    Get the CID of the current Nitro Enclave.
+# def get_cid() -> int:
+#     """
+#     Get the CID of the current Nitro Enclave.
     
-    Returns:
-        The enclave CID as an integer.
+#     Returns:
+#         The enclave CID as an integer.
 
-    Throws:
-        RuntimeError if the CID cannot be determined (usually if there are no enclaves or multiple).
-    """
-    process = subprocess.run(['nitro-cli', 'describe-enclaves'], check=True, capture_output=True)
-    enclaves = json.loads(process.stdout)
-    if len(enclaves) != 1:
-        raise RuntimeError(f"Expected exactly one enclave to be running, got {len(enclaves)}")
-    return enclaves[0]['EnclaveCID']
+#     Throws:
+#         RuntimeError if the CID cannot be determined (usually if there are no enclaves or multiple).
+#     """
+#     process = subprocess.run(['nitro-cli', 'describe-enclaves'], check=True, capture_output=True)
+#     enclaves = json.loads(process.stdout)
+#     if len(enclaves) != 1:
+#         raise RuntimeError(f"Expected exactly one enclave to be running, got {len(enclaves)}")
+#     return enclaves[0]['EnclaveCID']
 
 # Example usage
 if __name__ == '__main__':
