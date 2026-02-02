@@ -81,7 +81,9 @@ jobs:
           ENCLAVE_REPO: ${{ vars.PROJECT_NAME }}-enclave
           WEBSERVER_REPO: ${{ vars.PROJECT_NAME }}-webserver
         run: |
-          echo "Deploying $IMAGE_TAG to instance $INSTANCE_ID"
+          set -e
+          echo "Deploying $IMAGE_TAG to instance"
+          ls
           
           # Build the commands array: set env vars, then run each line of the script
           COMMANDS=$(cat <<'SCRIPT' | jq -R -s -c '
