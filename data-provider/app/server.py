@@ -26,7 +26,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography import x509
 
-from enclave_client import EnclaveClient, EnclaveResponse, get_cid
+from enclave_client import EnclaveClient, EnclaveResponse
 
 app = Flask(__name__)
 
