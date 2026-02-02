@@ -41,10 +41,14 @@ aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS 
 echo "Pulling images..."
 docker pull "$ECR_REGISTRY/$ENCLAVE_REPO:$IMAGE_TAG"
 docker pull "$ECR_REGISTRY/$WEBSERVER_REPO:$IMAGE_TAG"
+docker pull "$ECR_REGISTRY/$JUDGE_REPO:$IMAGE_TAG"
+docker pull "$ECR_REGISTRY/$CHALLENGER_REPO:$IMAGE_TAG"
 
 # Tag for local use
 docker tag "$ECR_REGISTRY/$ENCLAVE_REPO:$IMAGE_TAG" enclave:latest
 docker tag "$ECR_REGISTRY/$WEBSERVER_REPO:$IMAGE_TAG" webserver:latest
+docker tag "$ECR_REGISTRY/$JUDGE_REPO:$IMAGE_TAG" judge:latest
+docker tag "$ECR_REGISTRY/$CHALLENGER_REPO:$IMAGE_TAG" challenger:latest
 
 # Stop existing webserver
 echo "Stopping existing webserver..."
