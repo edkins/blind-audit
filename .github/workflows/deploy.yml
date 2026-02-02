@@ -58,7 +58,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.get-account.outputs.registry }}
           WEBSERVER_REPO: ${{ vars.PROJECT_NAME }}-webserver
         run: |
-          docker build -t $ECR_REGISTRY/$WEBSERVER_REPO:${{ github.sha }} -f infra2/Dockerfile.webserver .
+          docker build -t $ECR_REGISTRY/$WEBSERVER_REPO:${{ github.sha }} -f data-provider/Dockerfile .
           docker push $ECR_REGISTRY/$WEBSERVER_REPO:${{ github.sha }}
           docker tag $ECR_REGISTRY/$WEBSERVER_REPO:${{ github.sha }} $ECR_REGISTRY/$WEBSERVER_REPO:latest
           docker push $ECR_REGISTRY/$WEBSERVER_REPO:latest

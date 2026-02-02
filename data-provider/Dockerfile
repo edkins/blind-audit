@@ -26,24 +26,24 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
 # Build WAMR (WebAssembly Micro Runtime)
 # We're building in interpreter mode for simplicity - no SGX hardware needed
 # =============================================================================
-WORKDIR /opt
+# WORKDIR /opt
 
-RUN git clone --depth 1 https://github.com/bytecodealliance/wasm-micro-runtime.git wamr
+# RUN git clone --depth 1 https://github.com/bytecodealliance/wasm-micro-runtime.git wamr
 
-WORKDIR /opt/wamr/product-mini/platforms/linux
+# WORKDIR /opt/wamr/product-mini/platforms/linux
 
-# Build WAMR with WASI support
-RUN mkdir build && cd build && \
-    cmake .. \
-        -DWAMR_BUILD_INTERP=1 \
-        -DWAMR_BUILD_FAST_INTERP=1 \
-        -DWAMR_BUILD_AOT=0 \
-        -DWAMR_BUILD_LIBC_WASI=1 \
-        -DWAMR_BUILD_LIBC_BUILTIN=1 \
-    && make -j$(nproc)
+# # Build WAMR with WASI support
+# RUN mkdir build && cd build && \
+#     cmake .. \
+#         -DWAMR_BUILD_INTERP=1 \
+#         -DWAMR_BUILD_FAST_INTERP=1 \
+#         -DWAMR_BUILD_AOT=0 \
+#         -DWAMR_BUILD_LIBC_WASI=1 \
+#         -DWAMR_BUILD_LIBC_BUILTIN=1 \
+#     && make -j$(nproc)
 
-# Make iwasm available
-RUN cp build/iwasm /usr/local/bin/
+# # Make iwasm available
+# RUN cp build/iwasm /usr/local/bin/
 
 # =============================================================================
 # Application setup
