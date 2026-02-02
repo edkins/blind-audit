@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 
 # Parameters (passed as environment variables)
 IMAGE_TAG="${IMAGE_TAG:-latest}"
