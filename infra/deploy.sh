@@ -81,7 +81,7 @@ ENCLAVE_CID=$(nitro-cli describe-enclaves | jq -r '.[0].EnclaveCID')
 echo "Enclave CID: $ENCLAVE_CID"
 
 # Start docker services
-docker compose up -d
+docker compose up -d -f /tmp/docker-compose.yml
 
 echo "=========================================="
 echo "Deploy complete!"

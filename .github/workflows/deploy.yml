@@ -129,7 +129,7 @@ jobs:
           
           # Append the actual deploy script
           DEPLOY_SCRIPT=$(cat infra/deploy.sh | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          DOCKER_COMPOSE=$(cat docker-compose.yml | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          DOCKER_COMPOSE=$(cat docker-compose.sh | jq -R -s -c 'split("\n") | map(select(length > 0))')
           
           # Merge the two arrays
           ALL_COMMANDS=$(echo "[$COMMANDS, $DOCKER_COMPOSE, $DEPLOY_SCRIPT]" | jq -c 'flatten')
