@@ -31,8 +31,6 @@ app = Flask(__name__)
 
 
 # Configuration from environment
-TEE_SIGNING_KEY = os.environ.get('TEE_SIGNING_KEY', '/certs/tee-signing.key')
-TEE_CERT_CHAIN = os.environ.get('TEE_CERT_CHAIN', '/certs/tee-chain.pem')
 DATASET_PATH = os.environ.get('DATASET_PATH', '/data')
 JUDGE_URL = os.environ.get('JUDGE_URL', 'http://judge:8081/submit')
 HF_TOKEN = os.environ.get('HF_TOKEN') # For fetching dataset if needed for dataset.py
@@ -91,19 +89,6 @@ def reset_dataset_logic(source='SYNTHETIC', entries=10):
         return len(data_items), None
     except Exception as e:
         return 0, str(e)
-
-
-
-def load_signing_key():
-    """Load the TEE signing private key."""
-    with open(TEE_SIGNING_KEY, 'rb') as f:
-        return serialization.load_pem_private_key(f.read(), password=None)
-
-
-def load_cert_chain():
-    """Load the certificate chain as PEM."""
-    with open(TEE_CERT_CHAIN, 'rb') as f:
-        return f.read().decode('utf-8')
 
 
 def compute_merkle_root(directory: Path) -> tuple[str, dict]:
@@ -240,7 +225,7 @@ INDEX_HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TEE Challenge Portal - Data Provider</title>
+    <title>Blind Audit Challenge Portal - Data Provider</title>
     <style>
         body { font-family: system-ui, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
         h1 { color: #333; }
@@ -261,16 +246,11 @@ INDEX_HTML = """
     </style>
 </head>
 <body>
-    <h1>🔒 TEE Challenge Portal</h1>
+    <h1>🔒 Blind Audit Challenge Portal</h1>
     
     <div class="info">
         <strong>Dataset Merkle Root:</strong> <code>{{ merkle_root }}</code><br>
         <strong>Documents in dataset:</strong> {{ doc_count }}
-    </div>
-    
-    <div class="warning">
-        <strong>Note:</strong> This is a <em>simulated</em> TEE environment for demonstration.
-        In production, the attestation would be backed by hardware (Intel SGX, AMD SEV, etc.)
     </div>
     
     <form id="challenge-form" enctype="multipart/form-data">
@@ -459,10 +439,6 @@ def submit_challenge():
         
         # Get nonce
         nonce = request.form.get('nonce', secrets.token_hex(16))
-        
-        # Load keys and certs
-        signing_key = load_signing_key()
-        cert_chain = load_cert_chain()
         
         # Compute dataset info
         dataset_path = Path(DATASET_PATH)
