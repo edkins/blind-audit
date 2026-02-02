@@ -54,7 +54,9 @@ resource "aws_iam_role_policy" "ecr_pull" {
         ]
         Resource = [
           aws_ecr_repository.enclave.arn,
-          aws_ecr_repository.webserver.arn
+          aws_ecr_repository.webserver.arn,
+          aws_ecr_repository.judge.arn,
+          aws_ecr_repository.challenger.arn
         ]
       }
     ]

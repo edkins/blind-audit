@@ -62,7 +62,7 @@ docker rm webserver 2>/dev/null || true
 
 # Stop existing services
 echo "Stopping existing docker services..."
-docker compose down -f /tmp/docker-compose.yml || true
+docker compose -f /tmp/docker-compose.yml down || true
 
 # Terminate existing enclave
 echo "Terminating existing enclave..."
@@ -87,7 +87,7 @@ echo "Enclave CID: $ENCLAVE_CID"
 export ENCLAVE_CID
 
 # Start docker services
-docker compose up -d -f /tmp/docker-compose.yml
+docker compose -f /tmp/docker-compose.yml up -d
 
 echo "=========================================="
 echo "Deploy complete!"
