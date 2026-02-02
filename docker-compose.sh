@@ -17,7 +17,8 @@ services:
       - DATASET_PATH=/data
       - JUDGE_URL=http://judge:8081/submit
     networks:
-      - host
+      - frontend
+      - internal
     privileged: true  # Required for access to AF_VSOCK
     command:
       python3 server.py --cid "${ENCLAVE_CID}" --port 8080
