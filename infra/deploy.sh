@@ -78,7 +78,7 @@ docker run -d \
   --name webserver \
   --restart unless-stopped \
   --network host \
-  webserver:latest --cid "$ENCLAVE_CID" --port 8000
+  webserver:latest python3 server.py --cid "$ENCLAVE_CID" --port 8000
 
 echo "=========================================="
 echo "Deploy complete!"
