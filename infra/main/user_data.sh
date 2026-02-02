@@ -47,10 +47,10 @@ AWS_REGION="${aws_region}"
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 ECR_REGISTRY="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
-IMAGE_TAG="${IMAGE_TAG:-latest}"
-DEBUG_MODE="${DEBUG_MODE:-false}"
-ENCLAVE_REPO="${ENCLAVE_REPO:-tee-hackathon-enclave}"
-WEBSERVER_REPO="${WEBSERVER_REPO:-tee-hackathon-webserver}"
+IMAGE_TAG="$${IMAGE_TAG:-latest}"
+DEBUG_MODE="$${DEBUG_MODE:-false}"
+ENCLAVE_REPO="$${ENCLAVE_REPO:-tee-hackathon-enclave}"
+WEBSERVER_REPO="$${WEBSERVER_REPO:-tee-hackathon-webserver}"
 
 echo "=========================================="
 echo "Deploying tag: $IMAGE_TAG"
