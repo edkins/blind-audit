@@ -10,14 +10,17 @@ AWS_REGION="${AWS_REGION:-us-east-2}"
 
 # If running as root (via SSM), re-run as ec2-user
 if [ "$(id -u)" = "0" ]; then
-  chmod +rx "$0"
+  # Copy script to a location ec2-user can access
+  cp "$0" /tmp/deploy-run.sh
+  chmod +rx /tmp/deploy-run.sh
+  
   exec sudo -u ec2-user -i \
     IMAGE_TAG="$IMAGE_TAG" \
     DEBUG_MODE="$DEBUG_MODE" \
     ENCLAVE_REPO="$ENCLAVE_REPO" \
     WEBSERVER_REPO="$WEBSERVER_REPO" \
     AWS_REGION="$AWS_REGION" \
-    bash -e "$0"
+    bash -e /tmp/deploy-run.sh
 fi
 
 # Get AWS account ID dynamically
