@@ -75,7 +75,7 @@ jobs:
 
       - name: Deploy via SSM
         env:
-          INSTANCE_ID: ${{ vars.INSTANCE_ID }}
+          INSTANCE_ID: ${{ secrets.INSTANCE_ID }}
           IMAGE_TAG: ${{ github.sha }}
           DEBUG_MODE: ${{ inputs.debug_mode || 'false' }}
           ENCLAVE_REPO: ${{ vars.PROJECT_NAME }}-enclave
