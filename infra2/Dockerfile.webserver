@@ -7,11 +7,11 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install dependencies
-COPY webserver/requirements.txt .
+COPY infra2/webserver/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY webserver/ .
+COPY infra2/webserver/ .
 
 # Expose port for ALB health checks and traffic
 EXPOSE 8000

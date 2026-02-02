@@ -133,13 +133,13 @@ Go to your repository → Settings → Secrets and variables → Actions
 **Secrets:**
 | Name | Value |
 |------|-------|
-| `AWS_ROLE_ARN` | The role ARN from bootstrap output |
+| `AWS_ROLE_ARN` | The github_actions_role_arn ARN from bootstrap output |
+| `INSTANCE_ID` | The instance ID from main output |
 
 **Variables:**
 | Name | Value |
 |------|-------|
 | `AWS_REGION` | `us-east-2` (or your region) |
-| `INSTANCE_ID` | The instance ID from main output |
 | `PROJECT_NAME` | `blind-audit` (or what was configured in terraform.tfvars) |
 
 ### 4. Create a Cognito user

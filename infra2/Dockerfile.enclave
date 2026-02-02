@@ -9,11 +9,11 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install dependencies
-COPY enclave/requirements.txt .
+COPY infra2/enclave/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY enclave/ .
+COPY infra2/enclave/ .
 
 # The enclave entry point
 CMD ["python", "main.py"]
